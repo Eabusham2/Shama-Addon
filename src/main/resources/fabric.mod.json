@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "shama-addon",
+  "version": "1.21.11",
+  "name": "Shama addon",
+  "description": "Shama addon: hostile ESP, light-based base finder, Y-level spoof, ping spoof / fake lag, and a latest.log filter for Meteor Client.",
+  "authors": [
+    "You"
+  ],
+  "contact": {},
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "meteor": [
+      "shama.addon.ShamaAddon"
+    ],
+    "preLaunch": [
+      "shama.addon.LogCleaner"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": ">=1.21.11",
+    "java": ">=21",
+    "meteor-client": "*"
+  },
+  "mixins": [
+    "shama-addon.mixins.json"
+  ]
+}
