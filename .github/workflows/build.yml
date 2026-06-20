@@ -2,15 +2,14 @@ name: Build
 
 on:
   push:
-    branches: ["master", "main"]
+    branches: [ "master", "main" ]
   pull_request:
-    branches: ["master", "main"]
+    branches: [ "master", "main" ]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -21,11 +20,13 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: Set Gradle permissions
-        run: chmod +x gradlew
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.6.0'
 
       - name: Build
-        run: ./gradlew build
+        run: gradle build
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
