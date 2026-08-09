@@ -23,6 +23,37 @@ public class LogConfig {
     /** Drop loader/runtime mod-list dumps logged AFTER the filter installs. */
     public boolean hideModList = true;
 
+    /** Also mirror everything the filter KEEPS into a separate clean log file
+     *  (logs/shama-clean.log). Because it starts at preLaunch, it never contains
+     *  the launcher's pre-written mod list — so it's a naturally clean log. */
+    public boolean writeCleanLog = true;
+
+    /** Hide noisy but harmless render/auth spam from other mods (e.g. Essential's
+     *  "Error rendering fallback player" NPE that fires in offline mode). These
+     *  aren't cheat traces — just clutter — so they're separated from forceHide. */
+    public boolean hideRenderSpam = true;
+
+    public List<String> renderSpam = new ArrayList<>(Arrays.asList(
+        "error rendering fallback player",
+        "cannot invoke \"object.getclass()\"",
+        "directmethodhandleaccessor",
+        "renderlayerfactory",
+        "minecraftrenderbackend",
+        "ui3dplayer",
+        "does not use sampler sampler0",
+        "unknown authentication exception",
+        "unknownaccountexception",
+        "failed to refresh session",
+        "failed to fetch user properties",
+        "failed to retrieve profile key pair",
+        "could not authorize you against realms",
+        "failed to fetch realms feature flags",
+        "couldn't connect to realms",
+        "couldn't look up profile properties",
+        "could not fetch profile",
+        "ignoring chunk since it's not in the view range"
+    ));
+
     public List<String> modListMarkers = new ArrayList<>(Arrays.asList(
         "reloading resourcemanager", "modlist", "mod(s) metadata", "|--", "\\--"
     ));
@@ -111,7 +142,21 @@ public class LogConfig {
         "force-disabling", "@mixin target", "program match", "supported_formats",
         "pack metadata", "unable to read property", "blockstate",
         "update available", "datafixer optimizations", "quick reload listener",
-        "created:", "loaded shader"
+        "created:", "loaded shader",
+        // More standard vanilla / common engine lines
+        "setting user", "environment", "session", "narrator", "sound engine",
+        "sound system", "render thread", "worker-main", "datafixer bootstrap",
+        "server thread", "preparing spawn area", "time elapsed", "logged in",
+        "joined the game", "changing view distance", "changing simulation distance",
+        "loading", "loaded", "saving", "saved", "world save", "stopping",
+        "generating keypair", "starting integrated", "starting minecraft server",
+        "advancements", "recipes", "biome", "tags", "datapack", "data pack",
+        "reloadableresourcemanager", "resourcereload", "reloading texture",
+        "negotiation", "compression", "encryption", "keypair", "profile",
+        "quick play", "splash", "title", "panorama", "language", "translations",
+        "gl capabilities", "glcapabilities", "vsync", "framerate", "fov",
+        "window", "monitor", "fullscreen", "vram", "gpu", "cpu", "memory",
+        "ram", "jvm", "garbage", "uptime", "tick", "fps", "ms ", "chunk"
     ));
 
     /** Extra denylist terms (DENYLIST mode adds these to forceHide behavior). */
