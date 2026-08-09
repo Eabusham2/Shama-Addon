@@ -4,13 +4,13 @@ import meteordevelopment.meteorclient.events.render.Render3DEvent;
 import meteordevelopment.meteorclient.events.world.TickEvent;
 import meteordevelopment.meteorclient.renderer.ShapeMode;
 import meteordevelopment.meteorclient.settings.*;
-import meteordevelopment.meteorclient.systems.modules.Categories;
 import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.meteorclient.utils.render.RenderUtils;
 import meteordevelopment.meteorclient.utils.render.WireframeEntityRenderer;
 import meteordevelopment.meteorclient.utils.render.color.SettingColor;
 import meteordevelopment.orbit.EventHandler;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.mob.Monster;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
@@ -19,6 +19,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class HostileEsp extends Module {
+    public enum HealthColor {
+        Off,
+        Outline,
+        Fill,
+        Both
+    }
+
     public enum Mode {
         Box,
         Wireframe
@@ -35,12 +42,20 @@ public class HostileEsp extends Module {
         .build()
     );
 
+    private final Setting<Boolean> infiniteRange = sgGeneral.add(new BoolSetting.Builder()
+        .name("infinite-range")
+        .description("Ignore the range limit and show every loaded hostile mob. Note: the client only knows about entities the server has sent, so this reaches as far as your entity render distance, not literally infinite.")
+        .defaultValue(false)
+        .build()
+    );
+
     private final Setting<Double> range = sgGeneral.add(new DoubleSetting.Builder()
         .name("range")
         .description("Only show mobs within this distance.")
         .defaultValue(128)
         .min(0)
         .sliderMax(256)
+        .visible(() -> !infiniteRange.get())
         .build()
     );
 
@@ -60,16 +75,23 @@ public class HostileEsp extends Module {
     );
 
     private final Setting<SettingColor> sideColor = sgRender.add(new ColorSetting.Builder()
-        .name("side-color")
+        .name("fill-color")
         .description("The fill/side color.")
         .defaultValue(new SettingColor(255, 0, 0, 30))
         .visible(() -> mode.get() == Mode.Box)
         .build()
     );
 
+    private final Setting<HealthColor> healthColor = sgRender.add(new EnumSetting.Builder<HealthColor>()
+        .name("health-color")
+        .description("Tint by health (green at full, fading to red). Choose whether it colors the Outline, the Fill, or Both. Off uses the fixed colors below.")
+        .defaultValue(HealthColor.Off)
+        .build()
+    );
+
     private final Setting<SettingColor> lineColor = sgRender.add(new ColorSetting.Builder()
         .name("line-color")
-        .description("The outline color.")
+        .description("The outline color (when health-color isn't tinting the outline).")
         .defaultValue(new SettingColor(255, 0, 0, 255))
         .build()
     );
@@ -93,7 +115,7 @@ public class HostileEsp extends Module {
     private final List<Entity> targets = new ArrayList<>();
 
     public HostileEsp() {
-        super(Categories.Render, "hostile-esp", "ESP for hostile mobs with an optional tracer.");
+        super(shama.addon.ShamaAddon.MISC, "hostile-esp++", "ESP for hostile mobs with an optional tracer.");
     }
 
     @Override
@@ -106,6 +128,7 @@ public class HostileEsp extends Module {
         targets.clear();
         if (mc.world == null || mc.player == null) return;
 
+        boolean noLimit = infiniteRange.get();
         double rangeSq = range.get() * range.get();
 
         for (Entity entity : mc.world.getEntities()) {
@@ -115,7 +138,7 @@ public class HostileEsp extends Module {
 
             if (!entities.get().isEmpty() && !entities.get().contains(entity.getType())) continue;
 
-            if (mc.player.squaredDistanceTo(entity) > rangeSq) continue;
+            if (!noLimit && mc.player.squaredDistanceTo(entity) > rangeSq) continue;
 
             targets.add(entity);
         }
@@ -126,23 +149,54 @@ public class HostileEsp extends Module {
         if (targets.isEmpty()) return;
 
         for (Entity entity : targets) {
+            SettingColor line = lineFor(entity);
+            SettingColor side = sideFor(entity);
+
             // Boxes / wireframe
             if (mode.get() == Mode.Box) {
                 Box box = entity.getBoundingBox();
-                event.renderer.box(box, sideColor.get(), lineColor.get(), shapeMode.get(), 0);
+                event.renderer.box(box, side, line, shapeMode.get(), 0);
             } else {
-                WireframeEntityRenderer.render(event, entity, 1, sideColor.get(), lineColor.get(), shapeMode.get());
+                WireframeEntityRenderer.render(event, entity, 1, side, line, shapeMode.get());
             }
 
-            // Tracers
+            // Tracers — use the health tint when it's applied to the outline.
             if (tracers.get()) {
                 Vec3d pos = entity.getLerpedPos(event.tickDelta).add(0, entity.getHeight() / 2, 0);
+                boolean tintTracer = healthColor.get() == HealthColor.Outline || healthColor.get() == HealthColor.Both;
                 event.renderer.line(
                     RenderUtils.center.x, RenderUtils.center.y, RenderUtils.center.z,
                     pos.x, pos.y, pos.z,
-                    tracerColor.get()
+                    tintTracer ? line : tracerColor.get()
                 );
             }
         }
+    }
+
+    // Outline color: health gradient if health-color tints the outline, else fixed.
+    private SettingColor lineFor(Entity entity) {
+        if ((healthColor.get() == HealthColor.Outline || healthColor.get() == HealthColor.Both)
+            && entity instanceof LivingEntity living) {
+            return healthGradient(living, 255);
+        }
+        return lineColor.get();
+    }
+
+    // Fill color: health gradient if health-color tints the fill, else fixed.
+    private SettingColor sideFor(Entity entity) {
+        if ((healthColor.get() == HealthColor.Fill || healthColor.get() == HealthColor.Both)
+            && entity instanceof LivingEntity living) {
+            return healthGradient(living, sideColor.get().a);
+        }
+        return sideColor.get();
+    }
+
+    // green (full) -> yellow -> red (empty), at the given alpha.
+    private SettingColor healthGradient(LivingEntity living, int alpha) {
+        float max = living.getMaxHealth();
+        float frac = max <= 0 ? 1f : Math.max(0f, Math.min(1f, living.getHealth() / max));
+        int r = (int) ((1f - frac) * 255);
+        int g = (int) (frac * 255);
+        return new SettingColor(r, g, 0, alpha);
     }
 }
