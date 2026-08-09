@@ -1,0 +1,14 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "shama.addon.mixin.baritone",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [],
+  "client": [
+    "MineProcessMixin",
+    "MineProcessMixinApi"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

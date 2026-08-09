@@ -5,7 +5,17 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [],
   "client": [
-    "PlayerMoveC2SPacketMixin"
+    "AttackCooldownMixin",
+    "BlockBreakingSpeedMixin",
+    "CountPlacementModifierAccessor",
+    "HandSwingDurationMixin",
+    "HandledScreenAccessor",
+    "HeightRangePlacementModifierAccessor",
+    "InteractionManagerMixin",
+    "ItemCooldownMixin",
+    "LivingEntityAccessor",
+    "PlayerMoveC2SPacketMixin",
+    "RarityFilterPlacementModifierAccessor"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -1,0 +1,17 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "shama.addon.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [],
+  "client": [
+    "CameraMixin",
+    "ChatHudMixin",
+    "EntityLookMixin",
+    "MouseScrollMixin",
+    "RenderTickCounterMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

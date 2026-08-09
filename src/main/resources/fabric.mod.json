@@ -5,10 +5,10 @@
   "name": "Shama addon",
   "description": "Shama addon: hostile ESP, light-based base finder, Y-level spoof, ping spoof / fake lag, and a latest.log filter for Meteor Client.",
   "authors": [
-    "You"
+    "Eabusham2"
   ],
   "contact": {},
-  "license": "MIT",
+  "license": "GPL-3.0-or-later",
   "environment": "client",
   "entrypoints": {
     "meteor": [
@@ -16,6 +16,9 @@
     ],
     "preLaunch": [
       "shama.addon.LogCleaner"
+    ],
+    "modmenu": [
+      "shama.addon.ShamaModMenu"
     ]
   },
   "depends": {
@@ -25,6 +28,11 @@
     "meteor-client": "*"
   },
   "mixins": [
-    "shama-addon.mixins.json"
-  ]
+    "shama-addon.mixins.json",
+    "shama-addon.baritone.mixins.json",
+    "shama-addon.optional.mixins.json"
+  ],
+  "custom": {
+    "meteor-client:color": "7,255,220"
+  }
 }
