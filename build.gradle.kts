@@ -20,6 +20,7 @@ repositories {
     maven("https://maven.fabricmc.net/")
     maven("https://maven.meteordev.org/releases")
     maven("https://maven.meteordev.org/snapshots")
+    maven("https://maven.terraformersmc.com/releases/")
 }
 
 dependencies {
@@ -34,6 +35,15 @@ dependencies {
     // Log4j2 core is bundled with Minecraft at runtime; needed at compile time
     // for the latest.log filter. compileOnly so we don't ship a duplicate.
     compileOnly("org.apache.logging.log4j:log4j-core:2.24.3")
+
+    // Mod Menu — compile-only so the config screen builds; not a hard runtime dep.
+    modCompileOnly("com.terraformersmc:modmenu:17.0.0")
+
+    // Baritone API — for the OreSim++ MineProcess auto-mine hook. Coordinate
+    // taken from Meteor Rejects' own build.gradle. modCompileOnly: compiled
+    // against, not shipped. Baritone is a separate mod; the mixin config that
+    // uses it is non-required so its absence never crashes.
+    modCompileOnly("meteordevelopment:baritone:1.21.11-SNAPSHOT")
 }
 
 tasks.processResources {

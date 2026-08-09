@@ -29,10 +29,10 @@ The finished `.jar` ends up in `build/libs/`. You'll need Java 21.
 ## Modules
 
 Every module has settings, and every setting has a short explanation when you hover over it in-game.
-For the full detail — every module, every setting, every mode — see **[MODULES.md](MODULES.md)**.
 
 ### Finding bases, stashes & players
 
+- **active-chunk-detector++** — Tells a chunk somebody is holding open from one nobody has touched, by reading the parts of its state that only move while a player is near it.
 - **anomaly-scan++** — Learns what ordinary ground looks like on this server, then flags the chunks that do not match — finds builds made from plain terrain that block lists never catch.
 - **anti-anti-esp++** — Recovers what the server hides in chunk data by reading the channels it cannot fake — block changes, block entities, particles and sounds.
 - **base-detector++** — Flags chunks emitting heavy particle activity (working bases).
@@ -54,7 +54,6 @@ For the full detail — every module, every setting, every mode — see **[MODUL
 - **ore-spotter++** — X-ray that highlights ores through terrain, kept smooth so it doesn't stutter as you move.
 - **particle-esp++** — Highlights particles spawning underground while you're above ground (someone is down there).
 - **player-detector++** — Popup / sound / chat when another player renders near you.
-- **player-trace++** — Finds ground somebody else has been keeping loaded, from how fast the server hands it over and what changes while nobody is looking.
 - **rare-finder++** — Highlights valuable items on the ground or in item frames, and can beam them so you spot them from far off.
 - **region-map++** — Shows the server's region grid - every region numbered and shaded by which datacentre it runs on, with a marker for the one you're in.
 - **rtp-finder++** — Teleports around with /rtp hunting for rare loot, marks anything it finds with a beacon, and stops itself once it does.
@@ -145,11 +144,6 @@ For the full detail — every module, every setting, every mode — see **[MODUL
 
 In one line, for searching:
 
-anomaly-scan++, anti-anti-esp++, base-detector++, block-entity-debug++, break-indicators++, chunk-finder++, chunk-loader++, deep-activity++, find-log++, geode-finder++, hidden-player-detect++, hole-finder++, hopper-debug++, light-debug++, loaded-region-finder++, logout-spots++, ocean-monument-finder++, ore-sim++, ore-spotter++, particle-esp++, player-detector++, player-trace++, rare-finder++, region-map++, rtp-finder++, search-map++, signal-scanner++, spawn-cluster-finder++, spawner-finder++, staff-detector++, stronghold-finder++, sus-chunk-finder++, tunnel-finder++, voice-chat-sniffer++, attribute-swap++, auto-city++, auto-log++, bombaura++, bow-aimbot++, combat-extras++, combat-macros++, crystal-aura++, crystal-optim++, fast-bow++, godmode++, hit-particles++, self-defense++, wallbang++, auto-wasp++, click-tp++, elytra-fly++, fast-climb++, flight++, freecam++, jumps++, movement-extras++, noclip++, reverse-step++, snap-tap++, speed++, trident-boost++, auto-sign++, autoer++, chunk-reloader++, home-utils++, instant-mine++, invisibility++, miner++, nbt-adder++, no-break-delay++, no-cooldown++, portal-inv++, reach++, render-method++, swing-speed++, timer++, world-extras++, y-level-spoof++, anti-afk++, book-bot++, bypass++, camera-tweaks++, chat-extras++, fake-visuals++, force-commands++, hide-chat++, hostile-esp++, item-highlight++, lag-detector++, notifiers++, packet-logger++, ping-spoofer++, swarm++, time-changer++, trail++
+active-chunk-detector++, anomaly-scan++, anti-anti-esp++, base-detector++, block-entity-debug++, break-indicators++, chunk-finder++, chunk-loader++, deep-activity++, find-log++, geode-finder++, hidden-player-detect++, hole-finder++, hopper-debug++, light-debug++, loaded-region-finder++, logout-spots++, ocean-monument-finder++, ore-sim++, ore-spotter++, particle-esp++, player-detector++, rare-finder++, region-map++, rtp-finder++, search-map++, signal-scanner++, spawn-cluster-finder++, spawner-finder++, staff-detector++, stronghold-finder++, sus-chunk-finder++, tunnel-finder++, voice-chat-sniffer++, attribute-swap++, auto-city++, auto-log++, bombaura++, bow-aimbot++, combat-extras++, combat-macros++, crystal-aura++, crystal-optim++, fast-bow++, godmode++, hit-particles++, self-defense++, wallbang++, auto-wasp++, click-tp++, elytra-fly++, fast-climb++, flight++, freecam++, jumps++, movement-extras++, noclip++, reverse-step++, snap-tap++, speed++, trident-boost++, auto-sign++, autoer++, chunk-reloader++, home-utils++, instant-mine++, invisibility++, miner++, nbt-adder++, no-break-delay++, no-cooldown++, portal-inv++, reach++, render-method++, swing-speed++, timer++, world-extras++, y-level-spoof++, anti-afk++, book-bot++, bypass++, camera-tweaks++, chat-extras++, fake-visuals++, force-commands++, hide-chat++, hostile-esp++, item-highlight++, lag-detector++, notifiers++, packet-logger++, ping-spoofer++, swarm++, time-changer++, trail++
 
 Full explanations of every module and every setting are in **[MODULES.md](MODULES.md)**.
-
-## Licence
-
-GPL-3.0-or-later. Meteor Client is GPL-3.0 and that licence is copyleft, so anything built
-against it carries the same terms. See [LICENSE](LICENSE).
