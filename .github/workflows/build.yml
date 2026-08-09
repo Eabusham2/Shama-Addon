@@ -2,34 +2,116 @@ name: Build
 
 on:
   push:
-    branches: [ "master", "main" ]
+    branches: [ main ]
+    tags: [ "v*" ]
   pull_request:
-    branches: [ "master", "main" ]
+    branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build:
+  # Runs in seconds and needs no Java, so a broken commit fails before Gradle is ever started.
+  precheck:
+    name: Precheck
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up JDK 21
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Check the sources
+        run: python3 tools/check_sources.py
+
+  gradle:
+    name: Gradle build
+    needs: precheck
+    runs-on: ubuntu-latest
+    outputs:
+      jar: ${{ steps.jar.outputs.name }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 21
         uses: actions/setup-java@v4
         with:
+          distribution: temurin
           java-version: '21'
-          distribution: 'temurin'
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
+
+      - name: Cache Loom
+        uses: actions/cache@v4
         with:
-          gradle-version: '9.6.0'
+          path: ~/.gradle/loom-cache
+          key: ${{ runner.os }}-loom-${{ hashFiles('**/gradle.properties', '**/libs.versions.toml') }}
+          restore-keys: ${{ runner.os }}-loom-
+
+      - name: Make the wrapper executable
+        run: chmod +x ./gradlew
 
       - name: Build
-        run: gradle build
+        run: ./gradlew build --stacktrace
 
-      - name: Upload artifact
+      - name: Find the jar
+        id: jar
+        run: |
+          JAR=$(find build/libs -name '*.jar' ! -name '*-sources.jar' ! -name '*-dev.jar' | head -1)
+          if [ -z "$JAR" ]; then echo "no jar was produced"; exit 1; fi
+          echo "path=$JAR" >> "$GITHUB_OUTPUT"
+          echo "name=$(basename "$JAR")" >> "$GITHUB_OUTPUT"
+
+      - name: Upload the jar
         uses: actions/upload-artifact@v4
         with:
-          name: Shama-addon
+          name: shama-addon
           path: build/libs/*.jar
+          if-no-files-found: error
+          retention-days: 30
+
+      # Only reached when precheck and the build both passed, so a release is always a green build.
+      - name: Publish the latest build
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Latest build
+          body: |
+            Newest build, replaced automatically every time main is updated.
+
+            Built from `${{ github.sha }}`.
+
+            Drop the `.jar` into your `mods` folder next to Meteor Client.
+          files: ${{ steps.jar.outputs.path }}
+          make_latest: true
+
+      - name: Publish a tagged release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          body: |
+            Release ${{ github.ref_name }}.
+
+            Drop the `.jar` into your `mods` folder next to Meteor Client.
+          files: ${{ steps.jar.outputs.path }}
+          generate_release_notes: true
+
+      - name: Put the download in the run summary
+        run: |
+          {
+            echo "## ${{ steps.jar.outputs.name }}"
+            echo ""
+            echo "**[Download the latest build](https://github.com/${{ github.repository }}/releases/latest)**"
+            echo ""
+            echo "Or this exact run's jar from the Artifacts section of [this page](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})."
+          } >> "$GITHUB_STEP_SUMMARY"
