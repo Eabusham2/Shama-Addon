@@ -30,6 +30,14 @@ jobs:
       - name: Check the sources
         run: python3 tools/check_sources.py
 
+      - name: Check the workflow parses
+        run: |
+          python3 - <<'PY'
+          import yaml
+          yaml.safe_load(open(".github/workflows/build.yml"))
+          print("workflow is valid")
+          PY
+
   gradle:
     name: Gradle build
     needs: precheck
@@ -48,6 +56,8 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
 
       - name: Cache Loom
         uses: actions/cache@v4
