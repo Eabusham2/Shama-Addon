@@ -164,7 +164,8 @@ public class FindLog extends Module {
         }
 
         if (maxDistance.get() > 0) {
-            double d = mc.player.getPos().distanceTo(new net.minecraft.util.math.Vec3d(x, y, z));
+            // the client player has no getPos() in this version, but the components are there
+            double d = Math.sqrt(mc.player.squaredDistanceTo(x, y, z));
             if (d > maxDistance.get()) return;
         }
 
@@ -179,7 +180,7 @@ public class FindLog extends Module {
         if (sort.get() == Sort.Recent) {
             copy.sort((a, b) -> Long.compare(b.when(), a.when()));
         } else if (mc.player != null) {
-            var me = mc.player.getPos();
+            var me = new net.minecraft.util.math.Vec3d(mc.player.getX(), mc.player.getY(), mc.player.getZ());
             copy.sort((a, b) -> Double.compare(
                 me.squaredDistanceTo(a.x(), a.y(), a.z()),
                 me.squaredDistanceTo(b.x(), b.y(), b.z())));
@@ -207,7 +208,7 @@ public class FindLog extends Module {
 
         List<String> out = new ArrayList<>();
         out.add("Finds (" + finds.size() + ")");
-        var me = mc.player.getPos();
+        var me = new net.minecraft.util.math.Vec3d(mc.player.getX(), mc.player.getY(), mc.player.getZ());
         for (int i = 0; i < rows; i++) {
             Find f = list.get(i);
             int dist = (int) Math.sqrt(me.squaredDistanceTo(f.x(), f.y(), f.z()));
