@@ -27,16 +27,15 @@ jobs:
         with:
           python-version: '3.12'
 
+      # PyYAML is not on the runner by default, and the workflow check below needs it.
+      - name: Install PyYAML
+        run: pip install pyyaml
+
       - name: Check the sources
         run: python3 tools/check_sources.py
 
       - name: Check the workflow parses
-        run: |
-          python3 - <<'PY'
-          import yaml
-          yaml.safe_load(open(".github/workflows/build.yml"))
-          print("workflow is valid")
-          PY
+        run: python3 -c "import yaml, sys; yaml.safe_load(open('.github/workflows/build.yml')); print('workflow is valid')"
 
   gradle:
     name: Gradle build
@@ -56,8 +55,6 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
-        with:
-          cache-read-only: false
 
       - name: Cache Loom
         uses: actions/cache@v4
