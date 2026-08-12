@@ -3,6 +3,7 @@ package shama.addon.modules;
 import meteordevelopment.meteorclient.events.world.TickEvent;
 import meteordevelopment.meteorclient.settings.BoolSetting;
 import meteordevelopment.meteorclient.settings.DoubleSetting;
+import meteordevelopment.meteorclient.settings.EnumSetting;
 import meteordevelopment.meteorclient.settings.Setting;
 import meteordevelopment.meteorclient.settings.SettingGroup;
 import meteordevelopment.meteorclient.systems.modules.Module;
@@ -50,11 +51,6 @@ public class Freecam extends Module {
         .name("vertical-affects-look")
         .description("Apply it to the up-and-down part of flying where you look, too. Leave this off if you want flying forward to feel exactly as before and only the jump and sneak keys to be quicker.")
         .defaultValue(false).build());
-
-    private final Setting<Boolean> scrollSpeed = sgGeneral.add(new BoolSetting.Builder()
-        .name("scroll-changes-speed")
-        .description("Let the scroll wheel adjust the fly speed while the camera is out.")
-        .defaultValue(true).build());
 
     private final Setting<Boolean> scrollRemembers = sgGeneral.add(new BoolSetting.Builder()
         .name("scroll-remembers")
@@ -279,7 +275,6 @@ public class Freecam extends Module {
     /** Wheel adjusts live fly speed (Meteor parity). Returns true if handled (so the hotbar scroll is cancelled). */
     public boolean consumeScroll(double amount) {
         if (!scrollSpeed.get() || amount == 0) return false;
-        if (!scrollSpeed.get()) return;
         if (amount > 0) scrollMult *= scrollStep.get();
         else scrollMult /= scrollStep.get();
         scrollMult = MathHelper.clamp(scrollMult, 0.1, 10.0);
