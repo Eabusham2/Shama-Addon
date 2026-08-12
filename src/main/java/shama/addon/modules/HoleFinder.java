@@ -53,6 +53,11 @@ public class HoleFinder extends Module {
         .name("max-width")
         .description("Widest tunnel to treat as dug rather than natural. 3 covers everything people actually make: 1x1 ladder shafts, 2x1 and 3x1 corridors, and 3x3 rooms. Raise it for wider excavations, lower it to only catch tight shafts.")
         .defaultValue(3).min(1).max(8).sliderRange(1, 5).build());
+    private final Setting<Integer> surfaceCapY = sg.add(new IntSetting.Builder()
+        .name("surface-cap-y")
+        .description("Above this height, a cap with open sky over it still counts — that is what a hole plugged flush with the ground looks like. Below it, a block with air above is just something sitting inside a shaft that is already open, so it is ignored.")
+        .defaultValue(50).min(-64).max(320).sliderRange(0, 120).build());
+
     private final Setting<Boolean> obscureFills = sg.add(new BoolSetting.Builder()
         .name("obscure-fills")
         .description("Also count caps made of blocks that never form underground — planks, wool, concrete, terracotta, glass, bricks, copper, quartz and the rest. None of it generates down there, so a single one sealing a shaft is somebody's doing whatever the depth or shape. People plug a hole with whatever is in their hotbar, and it is usually not cobblestone.")
@@ -183,6 +188,19 @@ public class HoleFinder extends Module {
                 if (sealedPockets.get() && y >= pocketMinY.get() && isSealedPocket(chunk, bx + x, y, bz + z, bottom, top))
                     pockets.add(new int[]{bx + x, y, bz + z});
                 if (!isFillBlock(chunk, bx + x, y, bz + z)) continue;
+
+                // The block has to be SEALING the shaft, not just sitting inside one that is already
+                // open. If there is air above it, you are looking down an open hole at a block that
+                // happens to be in it — which is not somebody plugging anything.
+                if (y + 1 <= top && chunk.getBlockState(m.set(bx + x, y + 1, bz + z)).isAir()) {
+                    // the one exception is a cap flush with the surface, where the sky is above it
+                    boolean openToSky = true;
+                    for (int u = y + 1; u <= Math.min(top, y + 6); u++) {
+                        if (!chunk.getBlockState(m.set(bx + x, u, bz + z)).isAir()) { openToSky = false; break; }
+                    }
+                    if (!openToSky || y < surfaceCapY.get()) continue;
+                }
+
                 boolean deepEnough = true;
                 for (int d = 1; d <= depth; d++) {
                     if (y - d < bottom || !chunk.getBlockState(m.set(bx + x, y - d, bz + z)).isAir()) { deepEnough = false; break; }
