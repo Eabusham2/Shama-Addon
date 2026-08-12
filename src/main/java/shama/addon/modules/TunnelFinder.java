@@ -17,15 +17,35 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Tunnel Finder++ — scans each chunk for long straight air corridors along the 4
- * horizontal directions (their original 4-direction method): a run of air blocks at
- * the same Y/axis over 'min-length' with solid floor beneath is a player-dug tunnel,
- * not a cave (caves are irregular). Draws a line along detected tunnel segments.
+ * horizontal directions: a run of air at the same height and axis over 'min-length'
+ * with solid floor beneath is a dug tunnel, not a cave, because caves are irregular.
+ *
+ * The shape ticks decide what counts. A crawl tunnel, a walking tunnel, a two-wide
+ * corridor and a three-wide highway all read very differently about who dug them and
+ * why, so each is its own option rather than one catch-all.
  */
 public class TunnelFinder extends Module {
     private static final Direction[] DIRS = {Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST};
 
     private final SettingGroup sg = settings.getDefaultGroup();
     private final SettingGroup sgRender = settings.createGroup("Render");
+
+    private final Setting<Boolean> size1x1 = sg.add(new BoolSetting.Builder()
+        .name("1x1")
+        .description("Crawl tunnels, one block wide and one high. The cheapest way to cover distance underground, so people digging long-haul routes use them and they are easy to miss.")
+        .defaultValue(true).build());
+    private final Setting<Boolean> size1x2 = sg.add(new BoolSetting.Builder()
+        .name("1x2")
+        .description("The ordinary walking tunnel, one wide and two high. By far the most common thing you will find.")
+        .defaultValue(true).build());
+    private final Setting<Boolean> size2x2 = sg.add(new BoolSetting.Builder()
+        .name("2x2")
+        .description("Two wide and two high — a main corridor rather than a branch, so it usually leads somewhere worth following.")
+        .defaultValue(true).build());
+    private final Setting<Boolean> size3x3 = sg.add(new BoolSetting.Builder()
+        .name("3x3")
+        .description("Three by three. Nobody digs this by hand for fun, so it means a highway, a nether route or something built to move a lot of material.")
+        .defaultValue(true).build());
 
     private final Setting<Integer> minLength = sg.add(new IntSetting.Builder()
         .name("min-length").description("Minimum straight air-corridor length to flag as a tunnel.")
@@ -77,7 +97,26 @@ public class TunnelFinder extends Module {
             if (i < 16) {
                 int x = alongX ? cx + i : cx + line;
                 int z = alongX ? cz + line : cz + i;
-                air = chunk.getBlockState(m.set(x, y, z)).isAir() && chunk.getBlockState(m.set(x, y + 1, z)).isAir();
+                // width runs across the tunnel, height runs up it
+                int side = alongX ? 0 : 1;
+                boolean a1 = chunk.getBlockState(m.set(x, y, z)).isAir();
+                boolean a2 = chunk.getBlockState(m.set(x, y + 1, z)).isAir();
+                boolean roof = !chunk.getBlockState(m.set(x, y + 2, z)).isAir();
+
+                // one and two blocks to the side, for the wider shapes
+                int wx = side == 0 ? x : x + 1, wz = side == 0 ? z + 1 : z;
+                boolean w1 = chunk.getBlockState(m.set(wx, y, wz)).isAir();
+                boolean w2 = chunk.getBlockState(m.set(wx, y + 1, wz)).isAir();
+                int w2x = side == 0 ? x : x + 2, w2z = side == 0 ? z + 2 : z;
+                boolean t1 = chunk.getBlockState(m.set(w2x, y, w2z)).isAir();
+                boolean t3 = chunk.getBlockState(m.set(x, y + 2, z)).isAir();
+
+                boolean is1x1 = size1x1.get() && a1 && !a2;                 // one high, capped
+                boolean is1x2 = size1x2.get() && a1 && a2 && roof;          // two high, capped
+                boolean is2x2 = size2x2.get() && a1 && a2 && w1 && w2;      // two wide, two high
+                boolean is3x3 = size3x3.get() && a1 && a2 && t3 && w1 && t1;
+
+                air = is1x1 || is1x2 || is2x2 || is3x3;
                 floor = !chunk.getBlockState(m.set(x, y - 1, z)).isAir();
             }
             if (air && floor) { if (run == 0) startPos = i; run++; }
