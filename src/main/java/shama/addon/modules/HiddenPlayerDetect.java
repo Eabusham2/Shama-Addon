@@ -1,6 +1,7 @@
 package shama.addon.modules;
 
 import meteordevelopment.meteorclient.events.packets.PacketEvent;
+import net.minecraft.util.math.BlockPos;
 import meteordevelopment.meteorclient.events.render.Render3DEvent;
 import meteordevelopment.meteorclient.renderer.ShapeMode;
 import meteordevelopment.meteorclient.settings.*;
@@ -28,8 +29,8 @@ public class HiddenPlayerDetect extends Module {
     private final SettingGroup sgVanish = settings.createGroup("Vanished Staff");
 
     private final Setting<Boolean> countMismatch = sgVanish.add(new BoolSetting.Builder()
-        .name("count-mismatch")
-        .description("Compare the number of players the server says are online against how many are actually in the tab list. Vanish plugins hide the entry but usually forget the count, so a gap means somebody is on who does not want to be seen. This costs nothing and catches most setups.")
+        .name("containers-opening")
+        .description("Watch for chests and doors opening near you with nobody visible to have opened them. The server has to send the opening animation so your client can draw it, and it carries the exact position — so an invisible staff member rifling through a chest announces where they are standing.")
         .defaultValue(true).build());
 
     private final Setting<Boolean> soundsNoSource = sgVanish.add(new BoolSetting.Builder()
@@ -39,12 +40,12 @@ public class HiddenPlayerDetect extends Module {
 
     private final Setting<Integer> soundRadius = sgVanish.add(new IntSetting.Builder()
         .name("attribute-radius")
-        .description("How close a visible player must be for a sound to be treated as theirs. Anything outside that is unexplained.")
-        .defaultValue(24).min(4).max(128).sliderRange(8, 64).visible(soundsNoSource::get).build());
+        .description("How close a visible player has to be for a nearby signal to be put down to them. Anything happening further than this from every player you can see is unexplained, and that is the whole basis of this group.")
+        .defaultValue(24).min(4).max(128).sliderRange(8, 64).build());
 
     private final Setting<Boolean> entityGaps = sgVanish.add(new BoolSetting.Builder()
-        .name("entity-id-gaps")
-        .description("Watch the entity numbers the server hands out. They climb steadily, so a jump means entities were created that you were never told about — which is what happens when somebody joins hidden or a spectator spawns in.")
+        .name("unseen-entities")
+        .description("Watch the entity numbers the server hands out. They climb steadily, so a jump means entities were created near you that you were never shown — which is what happens when somebody hidden moves into range.")
         .defaultValue(false).build());
 
     private final Setting<Integer> gapSize = sgVanish.add(new IntSetting.Builder()
@@ -61,7 +62,6 @@ public class HiddenPlayerDetect extends Module {
         .name("report-vanished")
         .description("Say in chat when one of these trips.").defaultValue(true).build());
 
-    private java.util.Set<String> lastList = new java.util.HashSet<>();
     private long prevChunkAt;
     private int chunkStreak;
     private int lastEntityId = -1;
@@ -71,7 +71,7 @@ public class HiddenPlayerDetect extends Module {
 
     public HiddenPlayerDetect() { super(shama.addon.ShamaAddon.HUNT, "hidden-player-detect++", "Spots players moving around underground where you can't see them, by picking up the traces their movement leaves behind."); }
 
-    @Override public void onActivate() { scores.clear(); lastList.clear(); prevChunkAt = 0; chunkStreak = 0; lastEntityId = -1; }
+    @Override public void onActivate() { scores.clear(); prevChunkAt = 0; chunkStreak = 0; lastEntityId = -1; }
     @Override public void onDeactivate() { scores.clear(); }
 
     private void addScore(long key, int delta, String reason) {
@@ -120,18 +120,15 @@ public class HiddenPlayerDetect extends Module {
     private void onVanishPackets(PacketEvent.Receive event) {
         if (mc.world == null || mc.player == null || mc.getNetworkHandler() == null) return;
 
-        // A vanish toggle pulls somebody out of the tab list without a leave message, so a name that
-        // disappears while the list is otherwise steady is somebody going hidden rather than leaving.
-        if (countMismatch.get()) {
+        // A container or door opening is drawn client-side, so the server must send it with a real
+        // position. Nobody visible to have opened it means somebody is standing there unseen.
+        if (countMismatch.get()
+            && event.packet instanceof net.minecraft.network.packet.s2c.play.BlockEventS2CPacket be) {
             try {
-                java.util.Set<String> now = new java.util.HashSet<>();
-                for (var e : mc.getNetworkHandler().getPlayerList()) now.add(e.getProfile().name());
-                if (!lastList.isEmpty()) {
-                    for (String n : lastList) {
-                        if (!now.contains(n)) vanishAlert(n + " dropped out of the player list without leaving — vanished");
-                    }
-                }
-                lastList = now;
+                BlockPos p = be.getPos();
+                if (nobodyNear(p.getX() + 0.5, p.getY() + 0.5, p.getZ() + 0.5))
+                    vanishAlert(String.format("something opened at %d, %d, %d with nobody in sight",
+                        p.getX(), p.getY(), p.getZ()));
             } catch (Throwable ignored) {}
         }
 
