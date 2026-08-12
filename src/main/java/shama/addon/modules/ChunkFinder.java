@@ -124,6 +124,18 @@ public class ChunkFinder extends Module {
     private final Setting<Integer> storageThreshold = sgMethods.add(new IntSetting.Builder().name("storage-threshold").description("Containers in a chunk to flag it.").defaultValue(5).range(1, 50).sliderRange(1, 30).visible(() -> customThresholds.get() && mStorage.get()).build());
     private final Setting<Boolean> mSkylight = sgMethods.add(new BoolSetting.Builder().name("method-skylight").description("Roof detection (AnomalyColumnScanner method): flags surface columns that SHOULD see open sky but have blocked skylight above sea level = someone built a roof/overhang over them.").defaultValue(false).visible(() -> methodPreset.get() == MethodPreset.Custom).build());
     private final Setting<Integer> skylightThreshold = sgMethods.add(new IntSetting.Builder().name("skylight-columns").description("Roofed columns in a chunk to flag it.").defaultValue(20).range(1, 200).sliderRange(4, 100).visible(mSkylight::get).build());
+    private final Setting<Boolean> flatClusters = sgMethods.add(new BoolSetting.Builder()
+        .name("flat-clusters")
+        .description("Highlight patches of blocks laid out flat, the way a floor or a platform is. Terrain almost never produces a level slab of one material, so a flat patch is somebody having built one. The patch is drawn where it actually is rather than the whole chunk, and it can sit at any height: a floor, a roof, or a landing partway up a shaft.")
+        .defaultValue(false).build());
+    private final Setting<Integer> flatMin = sgMethods.add(new IntSetting.Builder()
+        .name("flat-min-blocks")
+        .description("How many blocks a level patch needs before it counts. Small numbers pick up natural ledges; a proper floor is much bigger than that.")
+        .defaultValue(20).min(4).max(256).sliderRange(8, 80).visible(flatClusters::get).build());
+    private final Setting<SettingColor> flatColor = sgMethods.add(new ColorSetting.Builder()
+        .name("flat-color").description("Colour used for those patches.")
+        .defaultValue(new SettingColor(60, 130, 255, 90)).visible(flatClusters::get).build());
+
     private final Setting<Boolean> mUnnatural = sgMethods.add(new BoolSetting.Builder()
         .name("method-unnatural")
         .description("Blocks that do not generate underground: cobblestone, planks of any wood, torches, rails, ladders and crafting tables. None of it forms naturally down there, so a cluster of it is somebody's build. From the PlayerChunkFinder approach in the shared files.")
@@ -211,6 +223,7 @@ public class ChunkFinder extends Module {
 
     @Override
     public void onDeactivate() {
+        flats.clear();
         announced.clear();
         if (scanner != null) { scanner.shutdownNow(); scanner = null; }
         synchronized (pending) { pending.clear(); }
@@ -253,6 +266,33 @@ public class ChunkFinder extends Module {
 
     /** Full per-chunk analysis — runs on a background thread. */
     private void analyze(WorldChunk chunk) {
+        // level patches of one material with headroom above: a floor somebody laid
+        if (flatClusters.get()) {
+            int bx2 = chunk.getPos().getStartX(), bz2 = chunk.getPos().getStartZ();
+            BlockPos.Mutable fm = new BlockPos.Mutable();
+            for (int y = chunk.getBottomY() + 1; y <= Math.min(chunk.getTopYInclusive() - 2, 200); y++) {
+                java.util.Map<String, Integer> tally = new java.util.HashMap<>();
+                for (int x = 0; x < 16; x++) for (int z = 0; z < 16; z++) {
+                    var st = chunk.getBlockState(fm.set(bx2 + x, y, bz2 + z));
+                    if (st.isAir()) continue;
+                    // it only reads as a floor if there is space to stand on it
+                    if (!chunk.getBlockState(fm.set(bx2 + x, y + 1, bz2 + z)).isAir()) continue;
+                    tally.merge(shama.addon.util.BlockPaths.of(st.getBlock()), 1, Integer::sum);
+                }
+                for (var fe : tally.entrySet()) {
+                    if (fe.getValue() < flatMin.get()) continue;
+                    String fp = fe.getKey();
+                    // natural ground makes flat patches all the time; placed material does not
+                    if (fp.contains("stone") || fp.contains("dirt") || fp.contains("grass")
+                        || fp.contains("sand") || fp.contains("gravel") || fp.contains("deepslate")
+                        || fp.contains("netherrack") || fp.contains("water") || fp.contains("ice")) continue;
+                    flats.put(((long) (bx2 + 8) << 40) | ((long) (y & 0xFFFF) << 24) | ((bz2 + 8) & 0xFFFFFF),
+                              new int[]{bx2, y, bz2});
+                    break;
+                }
+            }
+        }
+
         // blocks that never generate underground
         if (useMethod(mUnnatural, false)) {
             int made = 0;
@@ -470,6 +510,9 @@ public class ChunkFinder extends Module {
 
 
     /** Flag a chunk, merging with any existing flag within 2 chunks. */
+    /** Level patches found, keyed so one chunk can hold several at different heights. */
+    private final java.util.Map<Long, int[]> flats = new java.util.concurrent.ConcurrentHashMap<>();
+
     private void flag(BlockPos pos) {
         // your own mining and building trips the same signals, so skip anything right next to you
         if (mc.player != null && ignoreNearMe.get() > 0) {
@@ -493,6 +536,20 @@ public class ChunkFinder extends Module {
         // time you wander back. `announced` is never pruned, so each chunk is only ever reported once.
         if (chatAlert.get() && announced.add(key))
             alerts.add(String.format("[ChunkFinder] suspicious chunk at X:%d Z:%d", cp.x * 16 + 8, cp.z * 16 + 8));
+    }
+
+    @EventHandler
+    private void onRenderFlats(Render3DEvent event) {
+        if (!flatClusters.get() || flats.isEmpty() || mc.player == null) return;
+        SettingColor fc = flatColor.get();
+        Color fill = new Color(fc.r, fc.g, fc.b, fc.a);
+        Color line = new Color(fc.r, fc.g, fc.b, Math.min(255, fc.a + 130));
+        int px = mc.player.getBlockX(), pz = mc.player.getBlockZ();
+        int reach = (chunkRange.get() + 2) * 16;
+        for (int[] fv : flats.values()) {
+            if (Math.abs(fv[0] - px) > reach || Math.abs(fv[2] - pz) > reach) continue;
+            event.renderer.box(fv[0], fv[1], fv[2], fv[0] + 16, fv[1] + 1, fv[2] + 16, fill, line, ShapeMode.Both, 0);
+        }
     }
 
     @EventHandler
