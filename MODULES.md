@@ -35,6 +35,8 @@ Tells a chunk somebody is holding open from one nobody has touched, by reading t
   Flag chunks holding crops, saplings or plants grown past the stage they reach on their own. Growth only happens while a chunk is being ticked, so advanced growth is proof the ground was held open — and because it is written into the block itself, it survives relogs, works at any distance and does not care how the server threads its regions. This is the one that cannot be fooled.
 - `min-grown` — *default `12`, hidden until enabled*  
   How many well-grown plants a chunk needs before it counts. A couple grow naturally near spawn chunks; a field of them does not.
+- `ignore-my-range` — *default `12`*  
+  Ignore chunks this close to you, in chunks. Your own presence is what keeps nearby ground loaded and ticking, so anything inside your render distance would flag on you rather than on anybody else. Set it to roughly your render distance.
 - `state-change` — *default `true`*  
   Compare a chunk against how it looked last time and see whether the parts that only move while it is loaded have moved. The clock the game keeps of how long players have spent in a chunk is the main one: it advances while somebody is in range and sits perfectly still otherwise. So if it has gone up between two sightings, a player was there in between. Nothing else can move it, which makes this proof rather than a guess.
 - `min-gap` — *default `60`, hidden until enabled*  
@@ -101,7 +103,7 @@ Learns what ordinary ground looks like on this server, then flags the chunks tha
 
 ### anti-anti-esp++
 
-Recovers what the server hides in chunk data by reading the channels it cannot fake — block changes, block entities, particles and sounds.
+Recovers blocks the server left out of your chunk data. It listens to the messages that carry a real position — block entities, particles, sounds, live block changes — and keeps only the ones landing where your client shows plain stone, which is the server contradicting itself.
 
 **General**
 
@@ -117,7 +119,7 @@ Recovers what the server hides in chunk data by reading the channels it cannot f
 **Channels**
 
 - `block-changes` — *default `true`*  
-  Read single block changes. These describe something that actually happened, so the server sends the true block — even inside ground it is otherwise filling with deepslate.
+  Read single block changes. Something being placed inside ground the server told you was solid is that ground exposed as a lie. Blocks being broken are ignored — that is activity, not a hidden find, and deep-activity++ is the module for it.
 - `bulk-changes` — *default `true`*  
   Read bulk section updates as well. Mining and explosions arrive this way rather than one block at a time, so leaving this off misses most of what people are doing.
 - `block-entities` — *default `true`*  
@@ -334,6 +336,12 @@ Base/stash chunk finder with selectable detection methods (geology, entities, gr
   Roof detection (AnomalyColumnScanner method): flags surface columns that SHOULD see open sky but have blocked skylight above sea level = someone built a roof/overhang over them.
 - `skylight-columns` — *default `20`, hidden until enabled*  
   Roofed columns in a chunk to flag it.
+- `flat-clusters` — *default `false`*  
+  Highlight patches of blocks laid out flat, the way a floor or a platform is. Terrain almost never produces a level slab of one material, so a flat patch is somebody having built one. The patch is drawn where it actually is rather than the whole chunk, and it can sit at any height: a floor, a roof, or a landing partway up a shaft.
+- `flat-min-blocks` — *default `20`, hidden until enabled*  
+  How many blocks a level patch needs before it counts. Small numbers pick up natural ledges; a proper floor is much bigger than that.
+- `flat-color` — *default `new SettingColor(60, 130, 255, 90`, hidden until enabled*  
+  Colour used for those patches.
 - `method-unnatural` — *default `true`, hidden until enabled*  
   Blocks that do not generate underground: cobblestone, planks of any wood, torches, rails, ladders and crafting tables. None of it forms naturally down there, so a cluster of it is somebody's build. From the PlayerChunkFinder approach in the shared files.
 - `unnatural-below-y` — *default `50`, hidden until enabled*  
@@ -732,14 +740,14 @@ Spots players moving around underground where you can't see them, by picking up 
 
 **Vanished Staff**
 
-- `count-mismatch` — *default `true`*  
-  Compare the number of players the server says are online against how many are actually in the tab list. Vanish plugins hide the entry but usually forget the count, so a gap means somebody is on who does not want to be seen. This costs nothing and catches most setups.
+- `containers-opening` — *default `true`*  
+  Watch for chests and doors opening near you with nobody visible to have opened them. The server has to send the opening animation so your client can draw it, and it carries the exact position — so an invisible staff member rifling through a chest announces where they are standing.
 - `unexplained-sounds` — *default `true`*  
   Watch for player noises — footsteps, doors, containers, breaking blocks — arriving from places where nobody is visible. A spectator makes no sound, but staff watching in survival do, and the sound carries a position even when the player does not.
-- `attribute-radius` — *default `24`, hidden until enabled*  
-  How close a visible player must be for a sound to be treated as theirs. Anything outside that is unexplained.
-- `entity-id-gaps` — *default `false`*  
-  Watch the entity numbers the server hands out. They climb steadily, so a jump means entities were created that you were never told about — which is what happens when somebody joins hidden or a spectator spawns in.
+- `attribute-radius` — *default `24`*  
+  How close a visible player has to be for a nearby signal to be put down to them. Anything happening further than this from every player you can see is unexplained, and that is the whole basis of this group.
+- `unseen-entities` — *default `false`*  
+  Watch the entity numbers the server hands out. They climb steadily, so a jump means entities were created near you that you were never shown — which is what happens when somebody hidden moves into range.
 - `min-gap` — *default `40`, hidden until enabled*  
   How big a jump in those numbers has to be before it counts. Small gaps happen naturally from arrows and dropped items.
 - `chunks-held-open` — *default `true`*  
@@ -764,6 +772,8 @@ Finds shafts someone dug and then plugged behind them, and marks the exact block
   How many newly loaded chunks to check each tick. Lower this if the game stutters while flying.
 - `max-width` — *default `3`*  
   Widest tunnel to treat as dug rather than natural. 3 covers everything people actually make: 1x1 ladder shafts, 2x1 and 3x1 corridors, and 3x3 rooms. Raise it for wider excavations, lower it to only catch tight shafts.
+- `surface-cap-y` — *default `50`*  
+  Above this height, a cap with open sky over it still counts — that is what a hole plugged flush with the ground looks like. Below it, a block with air above is just something sitting inside a shaft that is already open, so it is ignored.
 - `obscure-fills` — *default `true`*  
   Also count caps made of blocks that never form underground — planks, wool, concrete, terracotta, glass, bricks, copper, quartz and the rest. None of it generates down there, so a single one sealing a shaft is somebody's doing whatever the depth or shape. People plug a hole with whatever is in their hotbar, and it is usually not cobblestone.
 - `stairs` — *default `true`*  
@@ -1618,6 +1628,14 @@ Finds long straight tunnels players have dug, including ones far underground you
 
 **General**
 
+- `1x1` — *default `true`*  
+  Crawl tunnels, one block wide and one high. The cheapest way to cover distance underground, so people digging long-haul routes use them and they are easy to miss.
+- `1x2` — *default `true`*  
+  The ordinary walking tunnel, one wide and two high. By far the most common thing you will find.
+- `2x2` — *default `true`*  
+  Two wide and two high — a main corridor rather than a branch, so it usually leads somewhere worth following.
+- `3x3` — *default `true`*  
+  Three by three. Nobody digs this by hand for fun, so it means a highway, a nether route or something built to move a lot of material.
 - `min-length` — *default `8`*  
   Minimum straight air-corridor length to flag as a tunnel.
 - `max-y` — *default `40`*  
@@ -2016,11 +2034,21 @@ Smooth free-flying detached camera with pathing / rotate / sneak options.
 
 **General**
 
-- `speed` — *default `1.0`*  
+- `speed` — *default `0.5`*  
   Camera fly speed (blocks per tick).
-- `vertical-speed` — *default `1.0`*  
+- `vertical-speed` — *default `1.2`*  
   Multiplies how fast you rise and fall against your normal speed. Under 1 makes it easier to hold a height while you look around; over 1 gets you up and down a shaft quickly.
-- `smoothing` — *default `0.12`*  
+- `vertical-affects-keys` — *default `true`*  
+  Apply the multiplier to jump and sneak, so tapping up or down moves you at the boosted rate.
+- `vertical-affects-look` — *default `false`*  
+  Apply it to the up-and-down part of flying where you look, too. Leave this off if you want flying forward to feel exactly as before and only the jump and sneak keys to be quicker.
+- `scroll-remembers` — *default `true`*  
+  Keep whatever you scrolled to for next time instead of snapping back to the slider value when you close the camera. Off means the scroll only lasts for that session.
+- `click-action` — *default `Click.Ignore`*  
+  What a mouse click does while the camera is out. Your body is not where the camera is, so a click used to swing at whatever happened to be in front of the camera, which is usually thin air. Ignore drops the click entirely; Real Body mines and uses where your actual character is looking, which is what you would get with the camera closed.
+- `hold-to-mine` — *default `true`, hidden until enabled*  
+  Mine only while the button is held, rather than latching on from one press. Off leaves the click held down until you press again, which is how it behaved before and is easy to forget about.
+- `smoothing` — *default `0.05`*  
   How much the camera eases into a start and out of a stop. A little takes the jerkiness off without making it feel like it is floating; 0 is instant, the way Meteor moves.
 - `fly-toward-crosshair` — *default `true`*  
   Move along the direction you're actually looking, so looking down and holding forward takes you down. Off = stay level and only rise/fall with jump and sneak.
