@@ -60,7 +60,7 @@ public class AntiAntiEsp extends Module {
 
     private final Setting<Boolean> fromBlockUpdates = sgSources.add(new BoolSetting.Builder()
         .name("block-changes")
-        .description("Read single block changes. These describe something that actually happened, so the server sends the true block — even inside ground it is otherwise filling with deepslate.")
+        .description("Read single block changes. Something being placed inside ground the server told you was solid is that ground exposed as a lie. Blocks being broken are ignored — that is activity, not a hidden find, and deep-activity++ is the module for it.")
         .defaultValue(true).build());
 
     private final Setting<Boolean> fromBulkUpdates = sgSources.add(new BoolSetting.Builder()
@@ -182,7 +182,7 @@ public class AntiAntiEsp extends Module {
 
     public AntiAntiEsp() {
         super(shama.addon.ShamaAddon.HUNT, "anti-anti-esp++",
-            "Recovers what the server hides in chunk data by reading the channels it cannot fake — block changes, block entities, particles and sounds.");
+            "Recovers blocks the server left out of your chunk data. It listens to the messages that carry a real position — block entities, particles, sounds, live block changes — and keeps only the ones landing where your client shows plain stone, which is the server contradicting itself.");
     }
 
     @Override
@@ -200,6 +200,9 @@ public class AntiAntiEsp extends Module {
 
     private boolean wanted(BlockPos pos, Block block) {
         if (mc.player == null) return false;
+        // A block turning to air is somebody breaking it, which is activity, not a hidden find.
+        // deep-activity++ is the module for that; recording it here just fills the list with holes.
+        if (block == Blocks.AIR || block == Blocks.CAVE_AIR || block == Blocks.VOID_AIR) return false;
         if (belowYOnly.get() && pos.getY() > belowY.get()) return false;
         if (mc.player.getBlockPos().getSquaredDistance(pos) > (double) range.get() * range.get()) return false;
         if (isAmethyst(pos)) return true;                     // amethyst is always worth keeping
@@ -228,7 +231,11 @@ public class AntiAntiEsp extends Module {
 
     private void record(BlockPos pos, Block block, boolean hint, String what) {
         if (!wanted(pos, block)) return;
-        if (!hint && !looksHidden(pos)) return;      // already visible, nothing recovered
+
+        // A recovery only means something when the server described something real in a place your
+        // client currently shows as filler. If your client already draws it, nothing was hidden and
+        // there is nothing to recover.
+        if (!looksHidden(pos)) return;
         long key = pos.asLong();
         found.put(key, new long[]{System.currentTimeMillis(), hint ? 1 : 0});
         if (chat.get() && announced.add(key))
