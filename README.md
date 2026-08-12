@@ -1,37 +1,66 @@
-# Shama Addon
+<h1 align="center">Shama Addon</h1>
 
-[![Build](https://github.com/Eabusham2/Shama-Addon/actions/workflows/build.yml/badge.svg)](https://github.com/Eabusham2/Shama-Addon/actions/workflows/build.yml)
+<p align="center">
+  <a href="https://github.com/Eabusham2/Shama-Addon/actions/workflows/build.yml"><img src="https://github.com/Eabusham2/Shama-Addon/actions/workflows/build.yml/badge.svg" alt="Build"></a>
+  <a href="https://github.com/Eabusham2/Shama-Addon/releases/latest"><img src="https://img.shields.io/github/v/release/Eabusham2/Shama-Addon?label=download" alt="Latest release"></a>
+  <img src="https://img.shields.io/badge/Minecraft-1.21.11-brightgreen" alt="Minecraft 1.21.11">
+  <img src="https://img.shields.io/badge/loader-Fabric-blue" alt="Fabric">
+  <img src="https://img.shields.io/badge/licence-GPL--3.0-orange" alt="GPL-3.0">
+</p>
 
-A Meteor Client addon for Minecraft 1.21.11.
+<p align="center">
+  <b>95 modules for Meteor Client</b>, built around finding what other people have hidden —<br>
+  bases, stashes, farms and players — with a full set of combat, movement and utility modules alongside.
+</p>
+
+---
 
 ## Download
 
-**[Get the latest build](https://github.com/Eabusham2/Shama-Addon/releases/latest)** — rebuilt automatically every time the code changes, so this link is always the newest version.
+**[⬇ Get the latest build](https://github.com/Eabusham2/Shama-Addon/releases/latest)**
 
-Drop the `.jar` into your `mods` folder next to Meteor Client.
+Rebuilt automatically every time the code changes, so that link is always the newest version.
 
-It adds **95 modules**, built mainly around finding bases, stashes and players, with a full set of combat, movement and utility modules alongside them.
+1. Install [Fabric](https://fabricmc.net/) for Minecraft 1.21.11 and [Meteor Client](https://meteorclient.com/)
+2. Drop the `.jar` into your `mods` folder next to Meteor
+3. Launch — the modules appear in the Meteor menu under their own categories
 
-## Installing
+---
 
-1. Install [Fabric](https://fabricmc.net/) for Minecraft 1.21.11 and [Meteor Client](https://meteorclient.com/).
-2. Drop the addon `.jar` into your `mods` folder next to Meteor.
-3. Launch the game — the modules appear in the Meteor menu under their categories.
+## What's in it
 
-## Building it yourself
+| Category | Modules | What it covers |
+|---|---:|---|
+| [Finding bases, stashes & players](#finding-bases-stashes--players) | 34 | Bases, stashes, farms and players — found from chunk data, packets, block patterns and timing. |
+| [Combat](#combat) | 14 | Crystals, bows, auras and self-defence. |
+| [Movement](#movement) | 13 | Flight, elytra, freecam and movement helpers. |
+| [Player](#player) | 17 | Mining, inventory and interaction with the world. |
+| [Misc](#misc) | 17 | Rendering, chat, HUD, timing and utilities. |
+| **Total** | **95** | |
 
-```bash
-./gradlew build
-```
+Every module has settings, and every setting explains itself when you hover over it in-game.
+The full write-up of every module, setting and mode is in **[MODULES.md](MODULES.md)**.
 
-The finished `.jar` ends up in `build/libs/`. You'll need Java 21.
+---
 
-## Modules
+## Worth starting with
 
-Every module has settings, and every setting has a short explanation when you hover over it in-game.
-For the full detail — every module, every setting, every mode — see **[MODULES.md](MODULES.md)**.
+- **anti-anti-esp++** — Reads the channels a server cannot fake — block entities, particles, sounds — and keeps only what lands where your client shows plain stone.
+- **active-chunk-detector++** — Tells a chunk somebody is holding open from one nobody has touched, by reading the parts of its state that only move while a player is near.
+- **anomaly-scan++** — Learns what ordinary ground looks like on your server, then flags what does not match. Finds builds made from plain terrain that block lists never catch.
+- **find-log++** — Every find from every detection module in one list with coordinates, sorted by distance or by when it happened.
+- **search-map++** — Remembers the ground you have already swept and points you at what you have not.
+
+---
+
+## All modules
 
 ### Finding bases, stashes & players
+
+*Bases, stashes, farms and players — found from chunk data, packets, block patterns and timing.*
+
+<details>
+<summary><b>34 modules</b> — click to expand</summary>
 
 - **active-chunk-detector++** — Tells a chunk somebody is holding open from one nobody has touched, by reading the parts of its state that only move while a player is near it.
 - **anomaly-scan++** — Learns what ordinary ground looks like on this server, then flags the chunks that do not match — finds builds made from plain terrain that block lists never catch.
@@ -68,7 +97,14 @@ For the full detail — every module, every setting, every mode — see **[MODUL
 - **tunnel-finder++** — Finds long straight tunnels players have dug, including ones far underground you'd never stumble across.
 - **voice-chat-sniffer++** — Highlights the chunk of a deep voice-chat transmitter (passive, no audio).
 
+</details>
+
 ### Combat
+
+*Crystals, bows, auras and self-defence.*
+
+<details>
+<summary><b>14 modules</b> — click to expand</summary>
 
 - **attribute-swap++** — Swaps slots on attack to refresh weapon attributes/cooldown.
 - **auto-city++** — Breaks the block beside a target in a hole to expose them.
@@ -85,7 +121,14 @@ For the full detail — every module, every setting, every mode — see **[MODUL
 - **self-defense++** — Self web / trap / anvil in one module.
 - **wallbang++** — Lets you attack targets through walls. Whether it lands depends on the server.
 
+</details>
+
 ### Movement
+
+*Flight, elytra, freecam and movement helpers.*
+
+<details>
+<summary><b>13 modules</b> — click to expand</summary>
 
 - **auto-wasp++** — Auto-fly pursuit that holds an offset over the nearest target.
 - **click-tp++** — Blink forward along your look. Bind a key and tap it.
@@ -101,7 +144,14 @@ For the full detail — every module, every setting, every mode — see **[MODUL
 - **speed++** — Move faster than normal. How much you can get away with depends on the server's anti-cheat.
 - **trident-boost++** — Riptide-launch in any conditions with a trident.
 
+</details>
+
 ### Player
+
+*Mining, inventory and interaction with the world.*
+
+<details>
+<summary><b>17 modules</b> — click to expand</summary>
 
 - **auto-sign++** — Copies your first sign's text onto every sign after.
 - **autoer++** — Auto-tool + auto-mount (and more) in one module.
@@ -121,7 +171,14 @@ For the full detail — every module, every setting, every mode — see **[MODUL
 - **world-extras++** — Flamethrower / liquid-fill world helpers.
 - **y-level-spoof++** — RISKY: Tries to fake your height to the server without moving you. Most anti-cheats will catch this.
 
+</details>
+
 ### Misc
+
+*Rendering, chat, HUD, timing and utilities.*
+
+<details>
+<summary><b>17 modules</b> — click to expand</summary>
 
 - **anti-afk++** — Periodic actions to prevent AFK kicks.
 - **book-bot++** — Writes the held writable book with your text.
@@ -141,15 +198,29 @@ For the full detail — every module, every setting, every mode — see **[MODUL
 - **time-changer++** — Force a custom client-side time of day.
 - **trail++** — A fading trail behind you.
 
-## Every module
+</details>
 
-In one line, for searching:
+---
 
-active-chunk-detector++, anomaly-scan++, anti-anti-esp++, base-detector++, block-entity-debug++, break-indicators++, chunk-finder++, chunk-loader++, deep-activity++, find-log++, geode-finder++, hidden-player-detect++, hole-finder++, hopper-debug++, light-debug++, loaded-region-finder++, logout-spots++, ocean-monument-finder++, ore-sim++, ore-spotter++, particle-esp++, player-detector++, rare-finder++, region-map++, rtp-finder++, search-map++, signal-scanner++, spawn-cluster-finder++, spawner-finder++, staff-detector++, stronghold-finder++, sus-chunk-finder++, tunnel-finder++, voice-chat-sniffer++, attribute-swap++, auto-city++, auto-log++, bombaura++, bow-aimbot++, combat-extras++, combat-macros++, crystal-aura++, crystal-optim++, fast-bow++, godmode++, hit-particles++, self-defense++, wallbang++, auto-wasp++, click-tp++, elytra-fly++, fast-climb++, flight++, freecam++, jumps++, movement-extras++, noclip++, reverse-step++, snap-tap++, speed++, trident-boost++, auto-sign++, autoer++, chunk-reloader++, home-utils++, instant-mine++, invisibility++, miner++, nbt-adder++, no-break-delay++, no-cooldown++, portal-inv++, reach++, render-method++, swing-speed++, timer++, world-extras++, y-level-spoof++, anti-afk++, book-bot++, bypass++, camera-tweaks++, chat-extras++, fake-visuals++, force-commands++, hide-chat++, hostile-esp++, item-highlight++, lag-detector++, notifiers++, packet-logger++, ping-spoofer++, swarm++, time-changer++, trail++
+## Every module, one line
 
-Full explanations of every module and every setting are in **[MODULES.md](MODULES.md)**.
+For searching the page with a single find:
+
+`active-chunk-detector++, anomaly-scan++, anti-anti-esp++, base-detector++, block-entity-debug++, break-indicators++, chunk-finder++, chunk-loader++, deep-activity++, find-log++, geode-finder++, hidden-player-detect++, hole-finder++, hopper-debug++, light-debug++, loaded-region-finder++, logout-spots++, ocean-monument-finder++, ore-sim++, ore-spotter++, particle-esp++, player-detector++, rare-finder++, region-map++, rtp-finder++, search-map++, signal-scanner++, spawn-cluster-finder++, spawner-finder++, staff-detector++, stronghold-finder++, sus-chunk-finder++, tunnel-finder++, voice-chat-sniffer++, attribute-swap++, auto-city++, auto-log++, bombaura++, bow-aimbot++, combat-extras++, combat-macros++, crystal-aura++, crystal-optim++, fast-bow++, godmode++, hit-particles++, self-defense++, wallbang++, auto-wasp++, click-tp++, elytra-fly++, fast-climb++, flight++, freecam++, jumps++, movement-extras++, noclip++, reverse-step++, snap-tap++, speed++, trident-boost++, auto-sign++, autoer++, chunk-reloader++, home-utils++, instant-mine++, invisibility++, miner++, nbt-adder++, no-break-delay++, no-cooldown++, portal-inv++, reach++, render-method++, swing-speed++, timer++, world-extras++, y-level-spoof++, anti-afk++, book-bot++, bypass++, camera-tweaks++, chat-extras++, fake-visuals++, force-commands++, hide-chat++, hostile-esp++, item-highlight++, lag-detector++, notifiers++, packet-logger++, ping-spoofer++, swarm++, time-changer++, trail++`
+
+---
+
+## Building it yourself
+
+```bash
+./gradlew build
+```
+
+The finished `.jar` lands in `build/libs/`. You will need Java 21.
+
+---
 
 ## Licence
 
-GPL-3.0-or-later. Meteor Client is GPL-3.0 and that licence is copyleft, so anything built
-against it carries the same terms. See [LICENSE](LICENSE).
+**GPL-3.0-or-later.** Meteor Client is GPL-3.0 and that licence is copyleft, so anything built
+against it carries the same terms: use it, change it, share it, but keep it open. See [LICENSE](LICENSE).
