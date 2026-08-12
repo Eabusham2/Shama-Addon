@@ -67,6 +67,11 @@ public class ActiveChunkDetector extends Module {
         .description("How many well-grown plants a chunk needs before it counts. A couple grow naturally near spawn chunks; a field of them does not.")
         .defaultValue(12).min(2).max(200).sliderRange(4, 60).visible(tickEvidence::get).build());
 
+    private final Setting<Integer> myRange = sgMethods.add(new IntSetting.Builder()
+        .name("ignore-my-range")
+        .description("Ignore chunks this close to you, in chunks. Your own presence is what keeps nearby ground loaded and ticking, so anything inside your render distance would flag on you rather than on anybody else. Set it to roughly your render distance.")
+        .defaultValue(12).min(0).max(48).sliderRange(4, 24).build());
+
     private final Setting<Boolean> stateCompare = sgMethods.add(new BoolSetting.Builder()
         .name("state-change")
         .description("Compare a chunk against how it looked last time and see whether the parts that only move while it is loaded have moved. The clock the game keeps of how long players have spent in a chunk is the main one: it advances while somebody is in range and sits perfectly still otherwise. So if it has gone up between two sightings, a player was there in between. Nothing else can move it, which makes this proof rather than a guess.")
@@ -142,7 +147,16 @@ public class ActiveChunkDetector extends Module {
     @Override
     public void onDeactivate() { traces.clear(); quietCount.clear(); announced.clear(); }
 
+    /** True when this chunk is close enough that YOU are the reason it is live. */
+    private boolean minesNotTheirs(long key) {
+        if (mc.player == null || myRange.get() <= 0) return false;
+        ChunkPos cp = new ChunkPos(key);
+        int pcx = mc.player.getChunkPos().x, pcz = mc.player.getChunkPos().z;
+        return Math.abs(cp.x - pcx) <= myRange.get() && Math.abs(cp.z - pcz) <= myRange.get();
+    }
+
     private void mark(long key, String why) {
+        if (minesNotTheirs(key)) return;        // you are what is keeping this one alive
         traces.put(key, why);
         if (chat.get() && announced.add(key)) {
             ChunkPos cp = new ChunkPos(key);
