@@ -381,8 +381,8 @@ public class GeodeFinder extends Module {
         long key = chunk.getPos().toLong();
         if (found.isEmpty() || growable < minAmethyst.get()) {
             // An empty rescan usually means the server stopped sending it, not that it is gone.
+            // an empty scan means the server stopped sending it, not that it is gone
             if (!lookBypass.get()) { byChunk.remove(key); bounds.remove(key); }
-            else lastSeen.putIfAbsent(key, System.currentTimeMillis());
             return;
         }
         lastSeen.remove(key);                       // being sent again, so it is current
@@ -392,10 +392,33 @@ public class GeodeFinder extends Module {
         int pct = growable == 0 ? 100 : (grown * 100) / growable;
         boolean suspicious = pct <= grownPercent.get();
 
-        byChunk.put(key, found);
+        // The gift's model, and the reason its bypass works: finds ACCUMULATE. A rescan that comes
+        // back partial, because the server is hiding some of it, must never overwrite what we already
+        // know. Only an explicit block update removes anything.
+        if (lookBypass.get()) {
+            List<Crystal> keep = byChunk.computeIfAbsent(key, k -> new java.util.concurrent.CopyOnWriteArrayList<>());
+            for (Crystal c : found) {
+                boolean dupe = false;
+                for (Crystal k2 : keep) {
+                    if (k2.x() == c.x() && k2.y() == c.y() && k2.z() == c.z()) { dupe = true; break; }
+                }
+                if (!dupe) keep.add(c);
+            }
+        } else {
+            byChunk.put(key, found);
+        }
         // no budding blocks left means somebody cleared them out; partial growth means it is untouched
         int stripped = buddingCount == 0 ? 1 : 0;
         int untouched = partial > 0 ? 1 : 0;
+        // recompute the box from everything known, not just what this scan happened to see
+        List<Crystal> all = byChunk.get(key);
+        if (all != null && !all.isEmpty()) {
+            for (Crystal c : all) {
+                minX = Math.min(minX, c.x()); maxX = Math.max(maxX, c.x());
+                minY = Math.min(minY, c.y()); maxY = Math.max(maxY, c.y());
+                minZ = Math.min(minZ, c.z()); maxZ = Math.max(maxZ, c.z());
+            }
+        }
         bounds.put(key, new int[]{minX, minY, minZ, maxX, maxY, maxZ, suspicious ? 1 : 0, stripped, untouched});
 
         if (chat.get() && announced.add(key)) {
