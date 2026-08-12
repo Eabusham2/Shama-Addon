@@ -29,12 +29,13 @@ The finished `.jar` ends up in `build/libs/`. You'll need Java 21.
 ## Modules
 
 Every module has settings, and every setting has a short explanation when you hover over it in-game.
+For the full detail — every module, every setting, every mode — see **[MODULES.md](MODULES.md)**.
 
 ### Finding bases, stashes & players
 
 - **active-chunk-detector++** — Tells a chunk somebody is holding open from one nobody has touched, by reading the parts of its state that only move while a player is near it.
 - **anomaly-scan++** — Learns what ordinary ground looks like on this server, then flags the chunks that do not match — finds builds made from plain terrain that block lists never catch.
-- **anti-anti-esp++** — Recovers what the server hides in chunk data by reading the channels it cannot fake — block changes, block entities, particles and sounds.
+- **anti-anti-esp++** — Recovers blocks the server left out of your chunk data. It listens to the messages that carry a real position — block entities, particles, sounds, live block changes — and keeps only the ones landing where your client shows plain stone, which is the server contradicting itself.
 - **base-detector++** — Flags chunks emitting heavy particle activity (working bases).
 - **block-entity-debug++** — Finds chests, hoppers, spawners and other containers below a set height — a stash finder.
 - **break-indicators++** — Boxes blocks being broken, shrinking with progress.
@@ -147,3 +148,8 @@ In one line, for searching:
 active-chunk-detector++, anomaly-scan++, anti-anti-esp++, base-detector++, block-entity-debug++, break-indicators++, chunk-finder++, chunk-loader++, deep-activity++, find-log++, geode-finder++, hidden-player-detect++, hole-finder++, hopper-debug++, light-debug++, loaded-region-finder++, logout-spots++, ocean-monument-finder++, ore-sim++, ore-spotter++, particle-esp++, player-detector++, rare-finder++, region-map++, rtp-finder++, search-map++, signal-scanner++, spawn-cluster-finder++, spawner-finder++, staff-detector++, stronghold-finder++, sus-chunk-finder++, tunnel-finder++, voice-chat-sniffer++, attribute-swap++, auto-city++, auto-log++, bombaura++, bow-aimbot++, combat-extras++, combat-macros++, crystal-aura++, crystal-optim++, fast-bow++, godmode++, hit-particles++, self-defense++, wallbang++, auto-wasp++, click-tp++, elytra-fly++, fast-climb++, flight++, freecam++, jumps++, movement-extras++, noclip++, reverse-step++, snap-tap++, speed++, trident-boost++, auto-sign++, autoer++, chunk-reloader++, home-utils++, instant-mine++, invisibility++, miner++, nbt-adder++, no-break-delay++, no-cooldown++, portal-inv++, reach++, render-method++, swing-speed++, timer++, world-extras++, y-level-spoof++, anti-afk++, book-bot++, bypass++, camera-tweaks++, chat-extras++, fake-visuals++, force-commands++, hide-chat++, hostile-esp++, item-highlight++, lag-detector++, notifiers++, packet-logger++, ping-spoofer++, swarm++, time-changer++, trail++
 
 Full explanations of every module and every setting are in **[MODULES.md](MODULES.md)**.
+
+## Licence
+
+GPL-3.0-or-later. Meteor Client is GPL-3.0 and that licence is copyleft, so anything built
+against it carries the same terms. See [LICENSE](LICENSE).
