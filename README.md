@@ -2,7 +2,7 @@
 
 <p align="center">
   <a href="https://github.com/Eabusham2/Shama-Addon/actions/workflows/build.yml"><img src="https://github.com/Eabusham2/Shama-Addon/actions/workflows/build.yml/badge.svg" alt="Build"></a>
-  <a href="https://github.com/Eabusham2/Shama-Addon/releases/latest"><img src="https://img.shields.io/github/v/release/Eabusham2/Shama-Addon?label=download" alt="Latest release"></a>
+  <a href="https://github.com/Eabusham2/Shama-Addon/releases/latest"><img src="https://img.shields.io/badge/download-latest%20build-blue" alt="Download the latest build"></a>
   <img src="https://img.shields.io/badge/Minecraft-1.21.11-brightgreen" alt="Minecraft 1.21.11">
   <img src="https://img.shields.io/badge/loader-Fabric-blue" alt="Fabric">
   <img src="https://img.shields.io/badge/licence-GPL--3.0-orange" alt="GPL-3.0">
@@ -19,7 +19,9 @@
 
 **[⬇ Get the latest build](https://github.com/Eabusham2/Shama-Addon/releases/latest)**
 
-Rebuilt automatically every time the code changes, so that link is always the newest version.
+Every push to `main` runs the checks, builds the jar, and replaces the release tagged
+`latest` — so that link never changes and always points at the newest build. Nothing is
+published unless the build passes, so a broken commit cannot become a download.
 
 1. Install [Fabric](https://fabricmc.net/) for Minecraft 1.21.11 and [Meteor Client](https://meteorclient.com/)
 2. Drop the `.jar` into your `mods` folder next to Meteor
@@ -39,7 +41,17 @@ Rebuilt automatically every time the code changes, so that link is always the ne
 | **Total** | **95** | |
 
 Every module has settings, and every setting explains itself when you hover over it in-game.
-The full write-up of every module, setting and mode is in **[MODULES.md](MODULES.md)**.
+➡ **[MODULES.md](MODULES.md)** is the full write-up: all 95 modules, every setting, its
+default, and every mode.
+
+### What "(risky)" means
+
+A handful of settings are named **(risky)**. Those fabricate movement, rotation, timing or a
+position you did not actually have — telling the server something untrue about yourself. They
+reach further than the safe options and they are the only things here an anti-cheat has reason
+to object to, so a rubber-band or a kick is possible. Every one is **off by default**, and in
+some modules they sit behind a second switch as well. Anything without the tag only ever reads
+what the server already sent you.
 
 ---
 
@@ -216,7 +228,44 @@ For searching the page with a single find:
 ./gradlew build
 ```
 
-The finished `.jar` lands in `build/libs/`. You will need Java 21.
+You will need **Java 21**. The finished `.jar` lands in `build/libs/`.
+
+**The same checks CI runs, before you push:**
+
+```bash
+python3 tools/check_sources.py
+```
+
+This is the precheck. It takes a couple of seconds, needs no Java, and gates the Gradle build
+in CI — so a mistake it can catch fails in seconds rather than after a full build. It looks for
+unbalanced braces and brackets, unused or duplicated imports, settings that are declared and
+then never read, an `@EventHandler` that has drifted off its method, two settings in one module
+sharing a name, anything used above the line that declares it, `.visible()` pointed at a
+non-boolean, modules missing their `++` or a description, and a mixin listed in a required
+config with no file behind it — that last one crashes the client at startup rather than failing
+the build, which is why it is checked here.
+
+It does not replace the compiler. It catches the layer underneath: things that compile but are
+wrong, and things that break at runtime instead of at build time.
+
+---
+
+## If something goes wrong
+
+**A build failed.** Open the [Actions tab](https://github.com/Eabusham2/Shama-Addon/actions) and
+look at the newest run. `Precheck` failing means one of the checks above — the log names the file
+and the problem. `Gradle build` failing is a real compile error, and the log gives the file, the
+line and the symbol.
+
+**Releases stopped appearing.** The workflow needs permission to publish. In
+**Settings → Actions → General → Workflow permissions**, pick **Read and write permissions**.
+Without it the build passes and then fails at the release step with a 403. Anyone forking this
+has to do the same.
+
+**A module misbehaves in game.** Open an
+[issue](https://github.com/Eabusham2/Shama-Addon/issues/new) with the module name, what you
+expected, and what happened. If the game crashed, the log in `.minecraft/logs/latest.log` is the
+useful part.
 
 ---
 
