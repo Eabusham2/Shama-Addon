@@ -64,7 +64,12 @@ public class Freecam extends Module {
 
     private final Setting<Boolean> holdToMine = sgGeneral.add(new BoolSetting.Builder()
         .name("hold-to-mine")
-        .description("Mine only while the button is held, rather than latching on from one press. Off leaves the click held down until you press again, which is how it behaved before and is easy to forget about.")
+        .description("Hold left click to mine from your real character's crosshair, and stop the moment you let go. Off ignores left click entirely while the camera is out.")
+        .defaultValue(true).visible(() -> clickAction.get() == Click.RealBody).build());
+
+    private final Setting<Boolean> holdToUse = sgGeneral.add(new BoolSetting.Builder()
+        .name("hold-to-use")
+        .description("Hold right click to use whatever you are holding, from your real character rather than the camera. This is what lets you keep firing rockets while you fly the camera around, or eat, or draw a bow, without closing the camera first.")
         .defaultValue(true).visible(() -> clickAction.get() == Click.RealBody).build());
     private final Setting<Double> smoothing = sgGeneral.add(new DoubleSetting.Builder()
         .name("smoothing").description("How much the camera eases into a start and out of a stop. A little takes the jerkiness off without making it feel like it is floating; 0 is instant, the way Meteor moves.").defaultValue(0.05).min(0).max(0.9).sliderRange(0, 0.5).decimalPlaces(2).build());
@@ -181,12 +186,11 @@ public class Freecam extends Module {
             return;
         }
 
-        // Real Body: the keys stay live so the game mines from your character's own crosshair.
-        if (holdToMine.get()) {
-            // follow the physical button rather than whatever state got latched
-            mc.options.attackKey.setPressed(phys(mc.options.attackKey));
-            mc.options.useKey.setPressed(phys(mc.options.useKey));
-        }
+        // Real Body: the keys stay live so the game acts from your character's own crosshair.
+        // Each button follows the physical state rather than whatever got latched, so holding is
+        // holding and letting go stops.
+        mc.options.attackKey.setPressed(holdToMine.get() && phys(mc.options.attackKey));
+        mc.options.useKey.setPressed(holdToUse.get() && phys(mc.options.useKey));
     }
 
     private void moveCamera() {
