@@ -548,7 +548,7 @@ public class SchematicBuilder extends Module {
             double flat = Math.sqrt(dx * dx + dz * dz);
             float yaw = (float) Math.toDegrees(Math.atan2(dz, dx)) - 90f;
             float pitch = (float) -Math.toDegrees(Math.atan2(dy, flat));
-            float n = (float) aimNoise.get();
+            float n = aimNoise.get().floatValue();   // a boxed Double will not cast straight to float
             yaw += shama.addon.util.Humanize.rotationNoise(n);
             pitch += shama.addon.util.Humanize.rotationNoise(n);
             pitch = clampPitch(pitch);
@@ -561,7 +561,7 @@ public class SchematicBuilder extends Module {
                 if (overshoot.get() && Math.abs(wrap(yaw - curYaw)) > 25f)
                     yaw += wrap(yaw - curYaw) > 0 ? 3f : -3f;
 
-                float step = (float) turnSpeed.get();
+                float step = turnSpeed.get().floatValue();
                 float dYaw = wrap(yaw - curYaw);
                 float dPitch = pitch - curPitch;
                 curYaw += Math.max(-step, Math.min(step, dYaw));
