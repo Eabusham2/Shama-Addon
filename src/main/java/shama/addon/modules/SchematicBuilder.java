@@ -433,7 +433,12 @@ public class SchematicBuilder extends Module {
         Direction face = supportFace(t.pos);
         if (face == null) {
             if (scaffold.get()) { placeScaffold(t); return; }
-            retire(t, "nothing to place against");
+            // Scaffolding is off. Either leave it alone, or put it to the back of the queue in the
+            // hope its neighbours get built first — but never place it against nothing, which is the
+            // easy-place behaviour this module exists to avoid.
+            if (skipUnsupported.get()) retire(t, "nothing to place against");
+            else if (requeue.get() && ++t.tries < attempts.get()) { queue.remove(t); queue.add(t); }
+            else retire(t, "nothing to place against");
             return;
         }
 
