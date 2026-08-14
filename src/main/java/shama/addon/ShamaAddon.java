@@ -44,6 +44,7 @@ import shama.addon.modules.Jumps;
 import shama.addon.modules.FastClimb;
 import shama.addon.modules.ClickTP;
 import shama.addon.modules.TridentBoost;
+import shama.addon.modules.SchematicBuilder;
 import shama.addon.modules.SearchMap;
 import shama.addon.modules.SignalScanner;
 import shama.addon.modules.LogoutSpots;
@@ -166,6 +167,7 @@ public class ShamaAddon extends MeteorAddon {
         Modules.get().add(new FastClimb());
         Modules.get().add(new ClickTP());
         Modules.get().add(new TridentBoost());
+        Modules.get().add(new SchematicBuilder());
         Modules.get().add(new SearchMap());
         Modules.get().add(new SignalScanner());
         Modules.get().add(new LogoutSpots());
