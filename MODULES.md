@@ -2449,7 +2449,9 @@ Forces chunks to reload so terrain the server sent but your client never drew sh
 
 ### schematic-builder++
 
-Builds a litematica schematic through the ordinary placement path — real rotations eased into rather than snapped to, real faces, scaffolding instead of blocks floating on nothing, and a pace that wanders and tires.
+Builds a litematica schematic through the ordinary placement path — real rotations eased into rather than snapped to, real faces, scaffolding instead of blocks floating on nothing, and a pace that wanders and tires. Can let Baritone do the walking while every block still goes down by hand.
+
+**Modes** — Manual, Baritone
 
 **General**
 
@@ -2519,6 +2521,15 @@ Builds a litematica schematic through the ordinary placement path — real rotat
   Break and replace anything already standing where the schematic wants something else. Off builds around whatever is in the way, which is safer on a server where breaking is watched.
 - `report` — *default `true`*  
   Say in chat what was placed, what was skipped and why, as it goes.
+
+**Walking**
+
+- `movement` — *default `Walk.Manual`*  
+  How you get around the build. Manual leaves the walking to you and builds whatever comes within reach. Baritone uses Baritone's pathfinding to take you to the next unfinished part — lowest layer first, nearest block first, the way its own build command goes about it — then stops, so every block still goes down through the same eased, humanised placement as manual. Baritone never places or breaks anything in the build itself.
+- `stop-distance` — *default `3`, hidden until enabled*  
+  How close Baritone brings you to the next block before handing back, in blocks. It has to be inside your reach, and a little short of it looks less like a bot parking at the exact limit.
+- `let-baritone-bridge (risky)` — *default `false`, hidden until enabled*  
+  Allow Baritone to pillar and bridge with its throwaway blocks to reach higher layers. Without it, parts of the build Baritone cannot walk to are skipped with a message. With it, Baritone places those blocks at its own pace rather than through the humanised path — exactly what this module exists to avoid — and they can land inside the build, so it is off by default.
 
 **Render**
 
