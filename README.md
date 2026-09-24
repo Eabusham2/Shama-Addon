@@ -178,7 +178,7 @@ what the server already sent you.
 - **portal-inv++** — Access your inventory during portal transit loading.
 - **reach++** — Extends attack range with selectable targeting. Rejected by strict server anti-cheats.
 - **render-method++** — Forces chunks to reload so terrain the server sent but your client never drew shows up.
-- **schematic-builder++** — Builds a litematica schematic through the ordinary placement path — real rotations eased into rather than snapped to, real faces, scaffolding instead of blocks floating on nothing, and a pace that wanders and tires.
+- **schematic-builder++** — Builds a litematica schematic through the ordinary placement path — real rotations eased into rather than snapped to, real faces, scaffolding instead of blocks floating on nothing, and a pace that wanders and tires. Can let Baritone do the walking while every block still goes down by hand.
 - **swing-speed++** — Controls how fast your arm swings — a set speed, a fixed duration, or auto-timed to whatever you're doing (mining a block, attacking, or using any item like fireworks).
 - **timer++** — Speeds up or slows down your game clock, with several styles and fine control.
 - **world-extras++** — Flamethrower / liquid-fill world helpers.
