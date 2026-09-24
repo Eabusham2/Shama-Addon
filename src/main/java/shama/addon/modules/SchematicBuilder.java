@@ -122,6 +122,11 @@ public class SchematicBuilder extends Module {
         .description("Go slightly past the block and settle back, the way a hand does when it moves quickly. Landing exactly on target every time, from any distance, is not something a mouse produces.")
         .defaultValue(true).visible(smoothTurning::get).build());
 
+    private final Setting<Boolean> packetRotations = sgAim.add(new BoolSetting.Builder()
+        .name("packet-rotations (risky)")
+        .description("Turn only the server's idea of where you are looking and leave your screen still. It does that by sending a look packet of its own on top of the game's normal movement packet, and timer checks on anarchy servers count exactly that, so it is off by default. With it off your view turns for real and the game's own packet carries the aim, one movement packet a tick like normal play.")
+        .defaultValue(false).visible(sendRotations::get).build());
+
     private final Setting<Boolean> varyFace = sgAim.add(new BoolSetting.Builder()
         .name("vary-face")
         .description("When more than one neighbouring face would work, pick between them rather than always taking the same one. A build placed entirely off one face has a signature you can see in the packets.")
@@ -224,6 +229,15 @@ public class SchematicBuilder extends Module {
     private float curYaw, curPitch;
     private boolean aimStarted;
     private int sinceBreak;
+    /** The block we have committed to, and where on it we are aiming. */
+    private Target locked;
+    private Vec3d lockedHit;
+    private Direction lockedFace;
+    private float aimYaw, aimPitch, settleYaw, settlePitch;
+    private boolean settlePending;
+    private int aimedFor;
+    /** Every position the schematic wants filled, built or not. Scaffolding never touches these. */
+    private final Set<Long> targetPositions = new HashSet<>();
     private String status = "nothing loaded";
 
     public SchematicBuilder() {
@@ -236,6 +250,7 @@ public class SchematicBuilder extends Module {
         queue.clear(); stuck.clear(); scaffoldPlaced.clear();
         timer = pausedFor = placed = skipped = sinceBreak = 0;
         aimStarted = false;
+        clearLock();
         status = "nothing loaded";
         loadNow.set(true);
     }
@@ -256,7 +271,7 @@ public class SchematicBuilder extends Module {
      * called by name — a rename disables loading instead of stopping the addon compiling.
      */
     private void load() {
-        queue.clear(); stuck.clear(); placed = 0; skipped = 0;
+        queue.clear(); stuck.clear(); targetPositions.clear(); clearLock(); placed = 0; skipped = 0;
         try {
             // the client knows its own directory; FabricLoader would do too, but this needs no extra API
             java.nio.file.Path dir = mc.runDirectory.toPath().resolve("schematics");
@@ -370,7 +385,9 @@ public class SchematicBuilder extends Module {
 
             BlockState st = palette.get(id);
             if (st.isAir()) continue;
-            queue.add(new Target(new BlockPos(origin.getX() + ox + x, origin.getY() + oy + y, origin.getZ() + oz + z), st));
+            BlockPos tp = new BlockPos(origin.getX() + ox + x, origin.getY() + oy + y, origin.getZ() + oz + z);
+            queue.add(new Target(tp, st));
+            targetPositions.add(tp.asLong());
         }
     }
 
@@ -390,6 +407,16 @@ public class SchematicBuilder extends Module {
         if (mc.player == null || mc.world == null || queue.isEmpty()) return;
 
         if (pausedFor > 0) { pausedFor--; return; }
+
+        // Turn towards the block we have committed to, one step every tick, before anything else.
+        // A turn still in progress is not a failed placement, so it is never counted against it.
+        if (locked != null) {
+            if (!queue.contains(locked)) clearLock();
+            else if (sendRotations.get()) {
+                if (!turnStep()) { aimedFor = 0; return; }
+                aimedFor++;
+            }
+        }
 
         // the longer this has run without a rest, the slower it goes
         int pace = baseDelay.get();
@@ -411,7 +438,7 @@ public class SchematicBuilder extends Module {
             return;
         }
 
-        Target t = nextReachable();
+        Target t = locked != null ? locked : nextReachable();
         if (t == null) {
             // nothing left within reach; if the build is finished, take the scaffolding back out
             if (queue.isEmpty() && cleanScaffold.get() && scaffold.get()) removeScaffolding();
@@ -419,30 +446,42 @@ public class SchematicBuilder extends Module {
         }
 
         BlockState here = mc.world.getBlockState(t.pos);
-        if (here.getBlock() == t.state.getBlock()) { queue.remove(t); return; }   // already right
+        if (here.getBlock() == t.state.getBlock()) { queue.remove(t); clearLock(); return; }   // already right
 
         if (!here.isAir()) {
+            clearLock();
             if (!fixWrong.get()) { queue.remove(t); skipped++; return; }
             mc.interactionManager.breakBlock(t.pos);
             mc.player.swingHand(Hand.MAIN_HAND);
             return;
         }
 
-        if (!selectBlock(t.state.getBlock())) { retire(t, "not carrying it"); return; }
+        if (!selectBlock(t.state.getBlock())) { clearLock(); retire(t, "not carrying it"); return; }
 
-        Direction face = supportFace(t.pos);
+        Direction face = (t == locked && lockedFace != null) ? lockedFace : supportFace(t.pos);
         if (face == null) {
+            clearLock();
             if (scaffold.get()) { placeScaffold(t); return; }
-            // Scaffolding is off. Either leave it alone, or put it to the back of the queue in the
-            // hope its neighbours get built first — but never place it against nothing, which is the
-            // easy-place behaviour this module exists to avoid.
+            // Scaffolding is off. Either leave it, or send it round again in case its neighbours get
+            // built first — but never place it against nothing.
             if (skipUnsupported.get()) retire(t, "nothing to place against");
             else if (requeue.get() && ++t.tries < attempts.get()) { queue.remove(t); queue.add(t); }
             else retire(t, "nothing to place against");
             return;
         }
 
-        if (place(t.pos, face)) { queue.remove(t); placed++; }
+        Vec3d hit = (t == locked && lockedHit != null) ? lockedHit : pickHit(t.pos.offset(face.getOpposite()), face);
+
+        if (sendRotations.get()) {
+            // A new block: commit to it and start turning. The placement waits until the server has
+            // already seen the finished turn, so the click never arrives facing somewhere else.
+            if (t != locked) { startAim(t, face, hit); return; }
+            if (aimedFor < 2) return;
+        }
+
+        boolean ok = doPlace(t.pos, face, hit);
+        clearLock();
+        if (ok) { queue.remove(t); placed++; }
         else if (++t.tries >= attempts.get()) retire(t, "would not go down");
         else if (requeue.get()) { queue.remove(t); queue.add(t); }
     }
@@ -461,6 +500,7 @@ public class SchematicBuilder extends Module {
             BlockPos p = BlockPos.fromLong(k);
             if (eye.squaredDistanceTo(Vec3d.ofCenter(p)) > r2) continue;
             if (mc.world.getBlockState(p).isAir()) { scaffoldPlaced.remove(k); continue; }
+            if (targetPositions.contains(k)) { scaffoldPlaced.remove(k); continue; }   // part of the build
             mc.interactionManager.breakBlock(p);
             mc.player.swingHand(Hand.MAIN_HAND);
             scaffoldPlaced.remove(k);
@@ -505,6 +545,14 @@ public class SchematicBuilder extends Module {
         BlockPos under = t.pos.down();
         if (!mc.world.getBlockState(under).isAir()) return;
 
+        // The schematic wants its own block there. Scaffolding it would put the wrong block in the
+        // build and break it out again later, so wait for that block instead.
+        if (targetPositions.contains(under.asLong())) {
+            if (requeue.get() && ++t.tries < attempts.get()) { queue.remove(t); queue.add(t); }
+            else retire(t, "waiting on the block below it");
+            return;
+        }
+
         Direction face = supportFace(under);
         // Nothing to scaffold from, or nothing to scaffold with: neither is a reason to give up on
         // the block. Put it to the back of the queue and carry on with the rest of the build, since
@@ -517,69 +565,78 @@ public class SchematicBuilder extends Module {
         if (place(under, face)) scaffoldPlaced.add(under.asLong());
     }
 
-    /**
-     * Send the placement, aiming at the face first.
-     *
-     * The rotation goes out as its own packet before the interaction, because a placement that
-     * arrives while you are facing elsewhere is the single clearest sign of a printer. The aim is
-     * nudged off centre, the point within the face moved around, and the turn eased into over
-     * several ticks rather than snapped to, so no two placements carry the same numbers and no
-     * single one arrives from an angle a hand could not have reached.
-     */
-    private boolean place(BlockPos pos, Direction face) {
-        BlockPos against = pos.offset(face.getOpposite());
-        Vec3d centre = Vec3d.ofCenter(against);
+    private void clearLock() {
+        locked = null; lockedHit = null; lockedFace = null; settlePending = false; aimedFor = 0;
+    }
 
+    /** A point on the face to aim at, moved around within it so no two placements share numbers. */
+    private Vec3d pickHit(BlockPos against, Direction face) {
+        Vec3d centre = Vec3d.ofCenter(against);
         double ox = 0, oy = 0, oz = 0;
         if (varySpot.get()) {
-            // stay well inside the face; the edges are where misclicks happen
             ox = (Math.random() - 0.5) * 0.6;
             oy = (Math.random() - 0.5) * 0.6;
             oz = (Math.random() - 0.5) * 0.6;
         }
-        Vec3d hit = centre.add(
+        return centre.add(
             face.getOffsetX() * 0.5 + (face.getOffsetX() == 0 ? ox : 0),
             face.getOffsetY() * 0.5 + (face.getOffsetY() == 0 ? oy : 0),
             face.getOffsetZ() * 0.5 + (face.getOffsetZ() == 0 ? oz : 0));
+    }
 
-        if (sendRotations.get()) {
-            Vec3d eye = mc.player.getEyePos();
-            double dx = hit.x - eye.x, dy = hit.y - eye.y, dz = hit.z - eye.z;
-            double flat = Math.sqrt(dx * dx + dz * dz);
-            float yaw = (float) Math.toDegrees(Math.atan2(dz, dx)) - 90f;
-            float pitch = (float) -Math.toDegrees(Math.atan2(dy, flat));
-            float n = aimNoise.get().floatValue();   // a boxed Double will not cast straight to float
-            yaw += shama.addon.util.Humanize.rotationNoise(n);
-            pitch += shama.addon.util.Humanize.rotationNoise(n);
-            pitch = clampPitch(pitch);
+    /** Commit to a block: work out where to look, nudged off exact, and set the turn going. */
+    private void startAim(Target t, Direction face, Vec3d hit) {
+        Vec3d eye = mc.player.getEyePos();
+        double dx = hit.x - eye.x, dy = hit.y - eye.y, dz = hit.z - eye.z;
+        double flat = Math.sqrt(dx * dx + dz * dz);
+        float n = aimNoise.get().floatValue();
+        float yaw = (float) Math.toDegrees(Math.atan2(dz, dx)) - 90f + shama.addon.util.Humanize.rotationNoise(n);
+        float pitch = clampPitch((float) -Math.toDegrees(Math.atan2(dy, flat)) + shama.addon.util.Humanize.rotationNoise(n));
 
-            if (!aimStarted) { curYaw = mc.player.getYaw(); curPitch = mc.player.getPitch(); aimStarted = true; }
+        if (!aimStarted) { curYaw = mc.player.getYaw(); curPitch = mc.player.getPitch(); aimStarted = true; }
+        locked = t; lockedFace = face; lockedHit = hit; aimedFor = 0;
+        settleYaw = yaw; settlePitch = pitch; settlePending = false;
+        aimYaw = yaw; aimPitch = pitch;
 
-            if (smoothTurning.get()) {
-                // A hand that moves quickly tends to go a little past and come back, so the target is
-                // nudged beyond the block when the turn is a long one.
-                if (overshoot.get() && Math.abs(wrap(yaw - curYaw)) > 25f)
-                    yaw += wrap(yaw - curYaw) > 0 ? 3f : -3f;
+        // a quick, long turn goes a little past and settles back, the way a hand does
+        if (smoothTurning.get() && overshoot.get() && Math.abs(wrap(yaw - curYaw)) > 25f) {
+            aimYaw = yaw + (wrap(yaw - curYaw) > 0 ? 3f : -3f);
+            settlePending = true;
+        }
+        if (!smoothTurning.get()) { curYaw = yaw; curPitch = pitch; applyRotation(); }
+    }
 
-                float step = turnSpeed.get().floatValue();
-                float dYaw = wrap(yaw - curYaw);
-                float dPitch = pitch - curPitch;
-                curYaw += Math.max(-step, Math.min(step, dYaw));
-                curPitch += Math.max(-step, Math.min(step, dPitch));
+    /** Move the aim one step towards where it is going, every tick. True once it has arrived. */
+    private boolean turnStep() {
+        float step = smoothTurning.get() ? turnSpeed.get().floatValue() : 360f;
+        float dYaw = wrap(aimYaw - curYaw), dPitch = aimPitch - curPitch;
+        curYaw += Math.max(-step, Math.min(step, dYaw));
+        curPitch = clampPitch(curPitch + Math.max(-step, Math.min(step, dPitch)));
+        applyRotation();
+        boolean there = Math.abs(wrap(aimYaw - curYaw)) <= 1.5f && Math.abs(aimPitch - curPitch) <= 1.5f;
+        if (there && settlePending) {           // reached the overshoot; now come back onto the block
+            aimYaw = settleYaw; aimPitch = settlePitch; settlePending = false;
+            return false;
+        }
+        return there;
+    }
 
-                // still swinging round to face it: send the turn and place on a later tick
-                if (Math.abs(wrap(yaw - curYaw)) > 4f || Math.abs(pitch - curPitch) > 4f) {
-                    mc.getNetworkHandler().sendPacket(new PlayerMoveC2SPacket.LookAndOnGround(
-                        curYaw, clampPitch(curPitch), mc.player.isOnGround(), false));
-                    return false;
-                }
-            }
+    /**
+     * Put the aim where the server will see it. By default this turns your actual view, so the game's
+     * own movement packet carries the rotation and the server gets one movement packet a tick, the
+     * same as normal play. The risky packet option sends the look with the placement instead.
+     */
+    private void applyRotation() {
+        if (packetRotations.get()) return;
+        mc.player.setYaw(curYaw);
+        mc.player.setPitch(curPitch);
+    }
 
-            curYaw = yaw; curPitch = pitch;
+    private boolean doPlace(BlockPos pos, Direction face, Vec3d hit) {
+        if (sendRotations.get() && packetRotations.get())
             mc.getNetworkHandler().sendPacket(new PlayerMoveC2SPacket.LookAndOnGround(
                 curYaw, clampPitch(curPitch), mc.player.isOnGround(), false));
-        }
-
+        BlockPos against = pos.offset(face.getOpposite());
         BlockHitResult res = new BlockHitResult(hit, face, against, false);
         var before = mc.world.getBlockState(pos).getBlock();
         mc.interactionManager.interactBlock(mc.player, Hand.MAIN_HAND, res);
