@@ -84,7 +84,10 @@ public class Swarm extends Module {
         if (mc.player == null) return;
         if (mode.get() == Mode.Host && !workers.isEmpty()) {
             String msg = mc.player.getX() + "," + mc.player.getY() + "," + mc.player.getZ();
-            for (PrintWriter w : workers) w.println(msg);
+            for (PrintWriter w : workers) {
+                w.println(msg);
+                if (w.checkError()) workers.remove(w);   // its socket is gone; stop counting it
+            }
         }
         // Workers expose hostPos via getInfoString; following logic can be layered on top.
     }

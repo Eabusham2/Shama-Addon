@@ -56,7 +56,7 @@ public class RareFinder extends Module {
             Items.NETHERITE_BOOTS, Items.NETHERITE_SWORD, Items.NETHERITE_PICKAXE, Items.NETHERITE_AXE,
             Items.NETHERITE_SHOVEL, Items.NETHERITE_HOE, Items.MUSIC_DISC_PIGSTEP, Items.DISC_FRAGMENT_5,
             Items.GILDED_BLACKSTONE, Items.SEA_LANTERN, Items.SPONGE, Items.WET_SPONGE, Items.ANCIENT_DEBRIS,
-            Items.CONDUIT, Items.ENCHANTING_TABLE, Items.SHULKER_BOX, Items.NETHERITE_BLOCK,
+            Items.ENCHANTING_TABLE, Items.SHULKER_BOX,
             Items.CHEST, Items.TRAPPED_CHEST, Items.BARREL, Items.ENDER_CHEST, Items.HOPPER,
             Items.FURNACE, Items.BLAST_FURNACE, Items.SMOKER, Items.BREWING_STAND, Items.ANVIL))
         .build());

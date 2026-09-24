@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "id": "shama-addon",
-  "version": "1.21.11",
+  "version": "${version}",
   "name": "Shama addon",
-  "description": "Shama addon: hostile ESP, light-based base finder, Y-level spoof, ping spoof / fake lag, and a latest.log filter for Meteor Client.",
+  "description": "A Meteor Client addon built around finding what other people have hidden: bases, stashes, farms and players, with combat, movement and utility modules alongside.",
   "authors": [
     "Eabusham2"
   ],
@@ -23,7 +23,7 @@
   },
   "depends": {
     "fabricloader": ">=0.16.0",
-    "minecraft": ">=1.21.11",
+    "minecraft": ">=${mc_version}",
     "java": ">=21",
     "meteor-client": "*"
   },
