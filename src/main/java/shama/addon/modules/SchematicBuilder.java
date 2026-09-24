@@ -218,6 +218,8 @@ public class SchematicBuilder extends Module {
         final BlockPos pos;
         final BlockState state;
         int tries;
+        /** A scaffold block rather than part of the schematic. */
+        boolean temp;
         Target(BlockPos pos, BlockState state) { this.pos = pos; this.state = state; }
     }
 
@@ -446,7 +448,8 @@ public class SchematicBuilder extends Module {
         }
 
         BlockState here = mc.world.getBlockState(t.pos);
-        if (here.getBlock() == t.state.getBlock()) { queue.remove(t); clearLock(); return; }   // already right
+        boolean right = t.temp ? !here.isAir() : here.getBlock() == t.state.getBlock();
+        if (right) { queue.remove(t); clearLock(); return; }   // already right
 
         if (!here.isAir()) {
             clearLock();
@@ -456,11 +459,13 @@ public class SchematicBuilder extends Module {
             return;
         }
 
-        if (!selectBlock(t.state.getBlock())) { clearLock(); retire(t, "not carrying it"); return; }
+        boolean held = t.temp ? selectAnyBuildingBlock() : selectBlock(t.state.getBlock());
+        if (!held) { clearLock(); if (t.temp) queue.remove(t); else retire(t, "not carrying it"); return; }
 
         Direction face = (t == locked && lockedFace != null) ? lockedFace : supportFace(t.pos);
         if (face == null) {
             clearLock();
+            if (t.temp) { queue.remove(t); return; }        // nothing to prop the scaffold on either
             if (scaffold.get()) { placeScaffold(t); return; }
             // Scaffolding is off. Either leave it, or send it round again in case its neighbours get
             // built first — but never place it against nothing.
@@ -481,8 +486,11 @@ public class SchematicBuilder extends Module {
 
         boolean ok = doPlace(t.pos, face, hit);
         clearLock();
-        if (ok) { queue.remove(t); placed++; }
-        else if (++t.tries >= attempts.get()) retire(t, "would not go down");
+        if (ok) {
+            queue.remove(t);
+            if (t.temp) scaffoldPlaced.add(t.pos.asLong()); else placed++;
+        }
+        else if (++t.tries >= attempts.get()) { if (t.temp) queue.remove(t); else retire(t, "would not go down"); }
         else if (requeue.get()) { queue.remove(t); queue.add(t); }
     }
 
@@ -562,7 +570,20 @@ public class SchematicBuilder extends Module {
             else retire(t, "nothing to build it against yet");
             return;
         }
-        if (place(under, face)) scaffoldPlaced.add(under.asLong());
+        // Its scaffold is already queued: let it go first, and do not spin on this block meanwhile.
+        for (Target q : queue) {
+            if (q.temp && q.pos.equals(under)) { queue.remove(t); queue.add(t); return; }
+        }
+        // Each scaffold counts as an attempt at the block above, so a spot that can never be
+        // scaffolded is given up on rather than tried forever.
+        if (++t.tries >= attempts.get()) { retire(t, "could not scaffold under it"); return; }
+
+        // Queue the scaffold block at the front so it goes through the same turn-then-place path as
+        // everything else, instead of being clicked while facing somewhere else.
+        Target sc = new Target(under, Blocks.AIR.getDefaultState());
+        sc.temp = true;
+        queue.add(0, sc);
+        queue.remove(t); queue.add(t);
     }
 
     private void clearLock() {
