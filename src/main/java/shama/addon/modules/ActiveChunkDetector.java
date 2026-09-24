@@ -263,6 +263,9 @@ public class ActiveChunkDetector extends Module {
     /** Plants that only reach an advanced stage if something kept ticking the chunk. */
     private boolean wellGrown(net.minecraft.block.BlockState st) {
         String p = shama.addon.util.BlockPaths.of(st.getBlock());
+        // amethyst goes through the shared matcher, then only the grown stages count as tick evidence
+        if (shama.addon.util.AmethystScan.isAmethystLike(st))
+            return p.equals("amethyst_cluster") || p.equals("large_amethyst_bud");
         switch (p) {
             case "wheat", "carrots", "potatoes", "beetroots", "nether_wart" -> {
                 // The age is read out of the state's own text rather than through the property API,
@@ -276,7 +279,6 @@ public class ActiveChunkDetector extends Module {
             }
             // these only stack up over many random ticks
             case "sugar_cane", "cactus", "bamboo", "kelp", "twisting_vines", "weeping_vines" -> { return true; }
-            case "amethyst_cluster", "large_amethyst_bud" -> { return true; }
             case "pointed_dripstone" -> { return true; }
             default -> { return false; }
         }
