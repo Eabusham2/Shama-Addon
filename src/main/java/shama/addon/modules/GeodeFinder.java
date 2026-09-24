@@ -235,7 +235,7 @@ public class GeodeFinder extends Module {
 
     @Override
     public void onActivate() {
-        byChunk.clear(); bounds.clear(); announced.clear(); lastSeen.clear(); geodeSizes.clear(); toastQueue.clear();
+        byChunk.clear(); bounds.clear(); announced.clear(); lastSeen.clear(); geodeSizes.clear(); toastQueue.clear(); strippedLive.clear();
         synchronized (pending) { pending.clear(); }
         scanner = java.util.concurrent.Executors.newFixedThreadPool(2, r -> {
             Thread t = new Thread(r, "shama-geode");
@@ -248,7 +248,7 @@ public class GeodeFinder extends Module {
     public void onDeactivate() {
         if (scanner != null) { scanner.shutdownNow(); scanner = null; }
         synchronized (pending) { pending.clear(); }
-        byChunk.clear(); bounds.clear(); announced.clear(); lastSeen.clear(); geodeSizes.clear(); toastQueue.clear();
+        byChunk.clear(); bounds.clear(); announced.clear(); lastSeen.clear(); geodeSizes.clear(); toastQueue.clear(); strippedLive.clear();
     }
 
     @EventHandler
@@ -450,6 +450,31 @@ public class GeodeFinder extends Module {
      * has to send a block update when somebody breaks it, or your world would go wrong. No update
      * means it is still there.
      */
+    /** Geodes somebody is stripping right now, seen in the block updates rather than a rescan. */
+    private final java.util.Set<Long> strippedLive = ConcurrentHashMap.newKeySet();
+
+    /**
+     * Budding amethyst cannot be picked up, so the only reason one turns into something else is
+     * that somebody is clearing the geode out. The update arrives before it is applied, so the world
+     * still shows what was there, which is how the change is spotted as it happens — without waiting
+     * for the chunk to be scanned again, and even while the chunk data is being hidden.
+     */
+    private void noteBudding(BlockPos pos, net.minecraft.block.BlockState now) {
+        if (mc.world == null) return;
+        if (mc.world.getBlockState(pos).getBlock() != net.minecraft.block.Blocks.BUDDING_AMETHYST) return;
+        if (now.getBlock() == net.minecraft.block.Blocks.BUDDING_AMETHYST) return;
+        strippedLive.add(new ChunkPos(pos).toLong());
+    }
+
+    @EventHandler
+    private void onBuddingChange(meteordevelopment.meteorclient.events.packets.PacketEvent.Receive event) {
+        if (!strippedGeodes.get()) return;
+        if (event.packet instanceof net.minecraft.network.packet.s2c.play.BlockUpdateS2CPacket p)
+            noteBudding(p.getPos().toImmutable(), p.getState());
+        else if (event.packet instanceof net.minecraft.network.packet.s2c.play.ChunkDeltaUpdateS2CPacket bulk)
+            bulk.visitUpdates((bp, st) -> noteBudding(bp.toImmutable(), st));
+    }
+
     @EventHandler
     private void onBlockUpdate(meteordevelopment.meteorclient.events.packets.PacketEvent.Receive event) {
         if (!forgetOnUpdate.get() || mc.world == null) return;
@@ -528,7 +553,7 @@ public class GeodeFinder extends Module {
                 ChunkPos cp = new ChunkPos(e.getKey());
                 if (Math.abs(cp.x - pcx) > r || Math.abs(cp.z - pcz) > r) continue;
                 int[] b = e.getValue();
-                boolean isStripped = strippedGeodes.get() && b.length > 7 && b[7] == 1;
+                boolean isStripped = strippedGeodes.get() && ((b.length > 7 && b[7] == 1) || strippedLive.contains(e.getKey()));
                 if (onlySuspicious.get() && b[6] == 0 && !isStripped) continue;
                 Color gf = fill, gl = line;
                 if (isStripped) {
