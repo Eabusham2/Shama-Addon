@@ -60,7 +60,7 @@ public class Freecam extends Module {
     private final Setting<Click> clickAction = sgGeneral.add(new EnumSetting.Builder<Click>()
         .name("click-action")
         .description("What a mouse click does while the camera is out. Your body is not where the camera is, so a click used to swing at whatever happened to be in front of the camera, which is usually thin air. Ignore drops the click entirely; Real Body mines and uses where your actual character is looking, which is what you would get with the camera closed.")
-        .defaultValue(Click.Ignore).build());
+        .defaultValue(Click.RealBody).build());
 
     private final Setting<Boolean> holdToMine = sgGeneral.add(new BoolSetting.Builder()
         .name("hold-to-mine")
@@ -86,7 +86,7 @@ public class Freecam extends Module {
         .name("scroll-step").description("How much each scroll notch multiplies the speed.").defaultValue(1.1).min(1.01).sliderRange(1.05, 1.5).decimalPlaces(2).visible(scrollSpeed::get).build());
 
     private final Setting<Boolean> keepInputs = sgGeneral.add(new BoolSetting.Builder()
-        .name("keep-inputs").description("Lock the attack/use you held on entry so you keep mining/using at your character's view.").defaultValue(true).build());
+        .name("keep-inputs").description("Lock the attack/use you held on entry so you keep mining/using at your character's view.").defaultValue(false).build());
     private final Setting<Boolean> mineAtCharacter = sgGeneral.add(new BoolSetting.Builder()
         .name("mine-at-character").description("A mouse press in freecam mines/interacts where your CHARACTER looks, not the camera.").defaultValue(true).build());
 
@@ -171,30 +171,8 @@ public class Freecam extends Module {
         handleActions();
     }
 
-    /**
-     * Decide what a click does while the camera is detached.
-     *
-     * The camera is not your body, so letting the click through untouched means swinging at whatever
-     * is in front of the camera, which is nothing, most of the time.
-     */
-    private void handleClicks() {
-        if (mc.options == null || mc.player == null) return;
-
-        if (clickAction.get() == Click.Ignore) {
-            mc.options.attackKey.setPressed(false);
-            mc.options.useKey.setPressed(false);
-            return;
-        }
-
-        // Real Body: the keys stay live so the game acts from your character's own crosshair.
-        // Each button follows the physical state rather than whatever got latched, so holding is
-        // holding and letting go stops.
-        mc.options.attackKey.setPressed(holdToMine.get() && phys(mc.options.attackKey));
-        mc.options.useKey.setPressed(holdToUse.get() && phys(mc.options.useKey));
-    }
 
     private void moveCamera() {
-        handleClicks();
         // Typing in chat or sitting in a GUI shouldn't drift the camera — raw key reads don't
         // know a screen is open, which made movement feel like it had a mind of its own.
         if (mc.currentScreen != null) { vel = Vec3d.ZERO; return; }
@@ -249,21 +227,37 @@ public class Freecam extends Module {
         mc.options.useKey.setPressed(false);
     }
 
+    private int useCooldown;
+
+    /**
+     * What your character does while the camera is out.
+     *
+     * Everything here aims from your real body, not the camera, so a click never swings at whatever
+     * happens to be in front of the camera. Each button follows the physical key, so holding is
+     * holding and letting go stops. Right click uses whatever you are holding when nothing is in
+     * reach, which is what lets rockets keep firing while you fly the camera around.
+     */
     private void handleActions() {
-        if (mc.interactionManager == null) return;
-        boolean mine = (keepInputs.get() && sAttack) || (mineAtCharacter.get() && phys(mc.options.attackKey));
-        boolean use  = (keepInputs.get() && sUse)    || (mineAtCharacter.get() && phys(mc.options.useKey));
+        if (mc.interactionManager == null || mc.player == null || mc.currentScreen != null) return;
+        if (useCooldown > 0) useCooldown--;
+
+        boolean real = mineAtCharacter.get() && clickAction.get() == Click.RealBody;
+        boolean mine = (keepInputs.get() && sAttack) || (real && holdToMine.get() && phys(mc.options.attackKey));
+        boolean use  = (keepInputs.get() && sUse)    || (real && holdToUse.get()  && phys(mc.options.useKey));
         if (!mine && !use) return;
 
         HitResult hr = mc.player.raycast(4.5, 1.0f, false);
-        if (hr.getType() != HitResult.Type.BLOCK || !(hr instanceof BlockHitResult bhr)) return;
+        BlockHitResult bhr = (hr != null && hr.getType() == HitResult.Type.BLOCK && hr instanceof BlockHitResult b) ? b : null;
 
-        if (mine) {
+        if (mine && bhr != null) {
             mc.interactionManager.updateBlockBreakingProgress(bhr.getBlockPos(), bhr.getSide());
             mc.player.swingHand(Hand.MAIN_HAND);
-        } else {
-            mc.interactionManager.interactBlock(mc.player, Hand.MAIN_HAND, bhr);
+        }
+        if (use && useCooldown == 0) {
+            if (bhr != null) mc.interactionManager.interactBlock(mc.player, Hand.MAIN_HAND, bhr);
+            else mc.interactionManager.interactItem(mc.player, Hand.MAIN_HAND);
             mc.player.swingHand(Hand.MAIN_HAND);
+            useCooldown = 4;                       // vanilla repeats a held right click every four ticks
         }
     }
 
