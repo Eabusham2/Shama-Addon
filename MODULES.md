@@ -1,6 +1,6 @@
 # Module reference
 
-Every one of the **95 modules**, what it is for, and what each of its settings does.
+Every one of the **96 modules**, what it is for, and what each of its settings does.
 
 Settings marked *(hidden until enabled)* only appear once the option above them is switched on, so the menu stays short until you need the detail. Anything named **(risky)** fabricates movement, rotation or timing you did not actually perform — those are off by default and can get you rubber-banded or kicked.
 
@@ -139,6 +139,20 @@ Recovers blocks the server left out of your chunk data. It listens to the messag
   Only keep what is under the height below, which is where the ground gets replaced.
 - `below-y` — *default `0`, hidden until enabled*  
   The height that limit uses.
+- `blocks` — *default `List.of(
+            net.minecraft.item.Items.CHEST, net.minecraft.item.Items.TRAPPED_CHEST,
+            net.minecraft.item.Items.BARREL, net.minecraft.item.Items.ENDER_CHEST,
+            net.minecraft.item.Items.SHULKER_BOX, net.minecraft.item.Items.HOPPER,
+            net.minecraft.item.Items.FURNACE, net.minecraft.item.Items.BLAST_FURNACE,
+            net.minecraft.item.Items.SMOKER, net.minecraft.item.Items.BREWING_STAND,
+            net.minecraft.item.Items.SPAWNER, net.minecraft.item.Items.BEACON,
+            net.minecraft.item.Items.CONDUIT, net.minecraft.item.Items.ENCHANTING_TABLE,
+            net.minecraft.item.Items.ANVIL, net.minecraft.item.Items.AMETHYST_CLUSTER,
+            net.minecraft.item.Items.BUDDING_AMETHYST, net.minecraft.item.Items.AMETHYST_BLOCK,
+            net.minecraft.item.Items.POINTED_DRIPSTONE, net.minecraft.item.Items.ANCIENT_DEBRIS,
+            net.minecraft.item.Items.DIAMOND_ORE, net.minecraft.item.Items.DEEPSLATE_DIAMOND_ORE,
+            net.minecraft.item.Items.OBSIDIAN, net.minecraft.item.Items.CRYING_OBSIDIAN`*  
+  Which blocks are worth recovering. Anything not here is ignored even when the server slips up and mentions it. It is an item picker, matched against the block's item form.
 
 **Force Data**
 
@@ -589,6 +603,8 @@ Everything block-update based, each its own tick: hidden chunk activity below a 
 
 Collects every find from every detection module into one list with coordinates, sorted by distance or by when it happened.
 
+**Modes** — Distance, Recent
+
 **General**
 
 - `sort` — *default `Sort.Distance`*  
@@ -599,6 +615,8 @@ Collects every find from every detection module into one list with coordinates, 
   Drop a find from the list after this many minutes. Set it high if you want a record of a whole session.
 - `max-distance` — *default `0`*  
   Ignore finds further away than this, in blocks. 0 keeps everything however far it was.
+- `ignore` — *default `List.of(`*  
+  Skip finds whose text contains any of these. Useful for muting one noisy detector without turning it off.
 
 **Panel**
 
@@ -630,6 +648,8 @@ Collects every find from every detection module into one list with coordinates, 
 ### geode-finder++
 
 Marks amethyst so you can tell a farmed geode from an untouched one — colour each crystal by how grown it is, or box the whole geode.
+
+**Modes** — Crystals, Geode, Both
 
 **General**
 
@@ -1061,6 +1081,8 @@ Popup / sound / chat when another player renders near you.
   Only count entities that also appear in the server's player list. NPCs, shop holograms and other fake players look identical to real ones in the world, and they are the usual reason this module cries wolf.
 - `range` — *default `128`*  
   Alert when a player is within this many blocks.
+- `whitelist` — *default `List.of(`*  
+  Player names to ignore (case-insensitive).
 - `popup` — *default `true`*  
   Show an on-screen title popup.
 - `chat` — *default `true`*  
@@ -1095,6 +1117,19 @@ Highlights valuable items on the ground or in item frames, and can beam them so 
   Highlight rare items displayed in item frames — people put their best gear on show.
 - `scan-ticks` — *default `20`*  
   Ticks between sweeps for dropped and framed items.
+- `items` — *default `List.of(
+            Items.DRAGON_EGG, Items.DRAGON_HEAD, Items.WITHER_SKELETON_SKULL, Items.PLAYER_HEAD,
+            Items.SKELETON_SKULL, Items.ZOMBIE_HEAD, Items.CREEPER_HEAD, Items.PIGLIN_HEAD,
+            Items.ELYTRA, Items.NETHER_STAR, Items.HEART_OF_THE_SEA, Items.BEACON, Items.CONDUIT,
+            Items.ENCHANTED_GOLDEN_APPLE, Items.TRIDENT, Items.NETHERITE_INGOT, Items.NETHERITE_SCRAP,
+            Items.NETHERITE_BLOCK, Items.NETHERITE_HELMET, Items.NETHERITE_CHESTPLATE, Items.NETHERITE_LEGGINGS,
+            Items.NETHERITE_BOOTS, Items.NETHERITE_SWORD, Items.NETHERITE_PICKAXE, Items.NETHERITE_AXE,
+            Items.NETHERITE_SHOVEL, Items.NETHERITE_HOE, Items.MUSIC_DISC_PIGSTEP, Items.DISC_FRAGMENT_5,
+            Items.GILDED_BLACKSTONE, Items.SEA_LANTERN, Items.SPONGE, Items.WET_SPONGE, Items.ANCIENT_DEBRIS,
+            Items.CONDUIT, Items.ENCHANTING_TABLE, Items.SHULKER_BOX, Items.NETHERITE_BLOCK,
+            Items.CHEST, Items.TRAPPED_CHEST, Items.BARREL, Items.ENDER_CHEST, Items.HOPPER,
+            Items.FURNACE, Items.BLAST_FURNACE, Items.SMOKER, Items.BREWING_STAND, Items.ANVIL`*  
+  Everything worth flagging — one list for the lot. Anything here is reported whether it is lying on the ground, hanging in an item frame, or placed as a block in the world. Ores are not here on purpose: ore-spotter++ handles those.
 
 **Alerts**
 
@@ -1171,6 +1206,8 @@ Teleports around with /rtp hunting for rare loot, marks anything it finds with a
 
 - `rtp-command` — *default `"rtp"`*  
   The command to send, without the slash. Usually just rtp.
+- `extra-variants` — *default `List.of(`*  
+  Optional extra versions to mix in at random, e.g. "rtp east" and "rtp west". Leave empty to always send the plain command above.
 - `min-wait-seconds` — *default `20`*  
   Shortest gap between attempts. The real gap is picked at random between this and the maximum, so the timing never looks mechanical.
 - `max-wait-seconds` — *default `45`*  
@@ -1180,6 +1217,16 @@ Teleports around with /rtp hunting for rare loot, marks anything it finds with a
 
 **What To Look For**
 
+- `rare-items` — *default `List.of(
+            Items.ELYTRA, Items.SKELETON_SKULL, Items.ZOMBIE_HEAD, Items.CREEPER_HEAD, Items.PLAYER_HEAD, Items.PIGLIN_HEAD, Items.NETHERITE_INGOT, Items.NETHERITE_BLOCK, Items.NETHERITE_SCRAP,
+            Items.NETHERITE_HELMET, Items.NETHERITE_CHESTPLATE, Items.NETHERITE_LEGGINGS, Items.NETHERITE_BOOTS,
+            Items.NETHERITE_SWORD, Items.NETHERITE_PICKAXE, Items.NETHERITE_AXE,
+            Items.NETHERITE_SHOVEL, Items.NETHERITE_HOE,
+            Items.ANCIENT_DEBRIS, Items.DRAGON_EGG, Items.DRAGON_HEAD, Items.BEACON,
+            Items.NETHER_STAR, Items.ENCHANTED_GOLDEN_APPLE, Items.TRIDENT, Items.HEART_OF_THE_SEA,
+            Items.WITHER_SKELETON_SKULL, Items.SHULKER_BOX, Items.TOTEM_OF_UNDYING,
+            Items.MUSIC_DISC_PIGSTEP, Items.SPONGE, Items.WET_SPONGE`*  
+  The loot worth stopping for. Anything here counts as a find whether it's lying on the ground, hanging in an item frame, or sitting in a nearby container.
 - `check-dropped` — *default `true`*  
   Count rare items lying on the ground.
 - `check-placed` — *default `true`*  
@@ -1389,10 +1436,16 @@ Alerts (popup/chat/sound) when likely staff go online or offline.
   Flag tab-list players in spectator mode (common for staff watching you).
 - `creative` — *default `true`*  
   Flag tab-list players in creative mode.
+- `staff-usernames` — *default `List.of("0Gsummer", "Bigboss_jeff123", "Bronuts", "Dough4", "DrDonutt", "Fallerfly", "FluffyMaster07", "Frwost", "ItszDaBaby", "Itszdeath", "LzouZMp5", "Munkerlich", "NoahvdAa", "Pastagamer08", "Rokezy", "RyuuI_", "W1zoX_", "_chaon", "archivePedro", "bautiedgar", "showered"`*  
+  Exact staff usernames — anyone here is always alerted on when they're online (case-insensitive). Pre-filled with known DonutSMP staff; add or remove freely.
 - `detect-roles` — *default `true`*  
   Flag anyone whose tab-list name shows a staff tag like (Admin)/(Mod)/[Staff]/(Dev).
 - `detect-prefixes` — *default `true`*  
   Turn prefix/name detection on or off. Uses the blacklist and whitelist below.
+- `prefix-blacklist` — *default `List.of("dev", "admin", "mod", "owner", "staff", "helper", "\u2605", "\u2606", "\u272A", "\u2B50"`, hidden until enabled*  
+  If a player's name contains any of these words/prefixes, flag them (e.g. dev, admin, mod, staff). Also includes the star symbols servers commonly put on staff ranks.
+- `prefix-whitelist` — *default `List.of("+", "media", "yt", "twitch", "\uD83D\uDCF7", "\uD83C\uDFA5", "\u25B6"`, hidden until enabled*  
+  If a player's name contains any of these, never flag them by name/prefix (e.g. +, media, yt, or the camera icon servers give content creators). Overrides the blacklist and unusual-name check.
 - `flag-odd-names` — *default `false`, hidden until enabled*  
   On top of the blacklist, also flag any name with a space or a character a normal Minecraft name can't have (coloured/bracketed staff names). Still respects the whitelist.
 
@@ -2032,6 +2085,8 @@ Fly freely. How well it holds up depends on the server's anti-cheat.
 
 Smooth free-flying detached camera with pathing / rotate / sneak options.
 
+**Modes** — Ignore, RealBody
+
 **General**
 
 - `speed` — *default `0.5`*  
@@ -2044,10 +2099,12 @@ Smooth free-flying detached camera with pathing / rotate / sneak options.
   Apply it to the up-and-down part of flying where you look, too. Leave this off if you want flying forward to feel exactly as before and only the jump and sneak keys to be quicker.
 - `scroll-remembers` — *default `true`*  
   Keep whatever you scrolled to for next time instead of snapping back to the slider value when you close the camera. Off means the scroll only lasts for that session.
-- `click-action` — *default `Click.Ignore`*  
+- `click-action` — *default `Click.RealBody`*  
   What a mouse click does while the camera is out. Your body is not where the camera is, so a click used to swing at whatever happened to be in front of the camera, which is usually thin air. Ignore drops the click entirely; Real Body mines and uses where your actual character is looking, which is what you would get with the camera closed.
 - `hold-to-mine` — *default `true`, hidden until enabled*  
-  Mine only while the button is held, rather than latching on from one press. Off leaves the click held down until you press again, which is how it behaved before and is easy to forget about.
+  Hold left click to mine from your real character's crosshair, and stop the moment you let go. Off ignores left click entirely while the camera is out.
+- `hold-to-use` — *default `true`, hidden until enabled*  
+  Hold right click to use whatever you are holding, from your real character rather than the camera. This is what lets you keep firing rockets while you fly the camera around, or eat, or draw a bow, without closing the camera first.
 - `smoothing` — *default `0.05`*  
   How much the camera eases into a start and out of a stop. A little takes the jerkiness off without making it feel like it is floating; 0 is instant, the way Meteor moves.
 - `fly-toward-crosshair` — *default `true`*  
@@ -2058,7 +2115,7 @@ Smooth free-flying detached camera with pathing / rotate / sneak options.
   Scroll the mouse wheel to change fly speed live (like Meteor's freecam).
 - `scroll-step` — *default `1.1`, hidden until enabled*  
   How much each scroll notch multiplies the speed.
-- `keep-inputs` — *default `true`*  
+- `keep-inputs` — *default `false`*  
   Lock the attack/use you held on entry so you keep mining/using at your character's view.
 - `mine-at-character` — *default `true`*  
   A mouse press in freecam mines/interacts where your CHARACTER looks, not the camera.
@@ -2171,7 +2228,7 @@ Riptide-launch in any conditions with a trident.
 
 ## Player
 
-Things that act on your own character — mining, inventory, interaction.
+Things that act on your own character — mining, building, inventory, interaction.
 
 ### auto-sign++
 
@@ -2390,6 +2447,91 @@ Forces chunks to reload so terrain the server sent but your client never drew sh
   Colour of the centre marker.
 
 
+### schematic-builder++
+
+Builds a litematica schematic through the ordinary placement path — real rotations eased into rather than snapped to, real faces, scaffolding instead of blocks floating on nothing, and a pace that wanders and tires.
+
+**General**
+
+- `schematic` — *default `"build.litematic"`*  
+  File to build, from the schematics folder in your Minecraft directory. Include the .litematic on the end. Litematica writes there by default, so anything you have saved should already be sitting in it.
+- `reload` — *default `false`*  
+  Read the file again. Turn this on after changing the name above, or after editing the schematic — it switches itself back off once the file is in.
+- `origin-at-me` — *default `true`*  
+  Put the corner of the schematic where you are standing when it loads. Off uses the coordinates saved inside the file, which is what you want if the schematic was cut from this world in the first place.
+
+**Pace**
+
+- `delay` — *default `4`*  
+  Ticks between placements, before any variation. Around 4 is a brisk but believable rate; 2 is faster than most people can click steadily.
+- `variation` — *default `40`*  
+  How much that delay wanders, as a percent. Nobody places blocks on a metronome, and a perfectly even interval is one of the easiest things to spot in a packet log.
+- `pauses` — *default `true`*  
+  Stop occasionally for a moment, the way somebody does when they look at what they are doing. Long unbroken runs of placements at a steady rate are what a printer looks like.
+- `pause-chance` — *default `3`, hidden until enabled*  
+  Roughly how often to stop, as a percent chance per placement.
+- `pause-length` — *default `20`, hidden until enabled*  
+  How long a pause lasts, in ticks. It varies either side of this.
+
+**Aiming**
+
+- `send-rotations` — *default `true`*  
+  Actually turn towards each block before placing it. This is the single most important thing here: a placement that arrives while you are facing somewhere else is the clearest possible sign of a printer, and most anarchy checks look for exactly that.
+- `aim-noise` — *default `2.5`, hidden until enabled*  
+  How far the aim wanders off centre each time, in degrees. Hitting the exact centre of a block face every single time is not something a hand does.
+- `smooth-turning` — *default `true`, hidden until enabled*  
+  Turn towards each block over several ticks instead of snapping to it. A head that jumps instantly from one exact angle to the next is the thing rotation checks are built to notice, and easing between them costs nothing but a few ticks.
+- `turn-speed` — *default `22`, hidden until enabled*  
+  How far the aim can move in one tick, in degrees. Lower looks more deliberate and builds more slowly; higher gets closer to snapping.
+- `overshoot` — *default `true`, hidden until enabled*  
+  Go slightly past the block and settle back, the way a hand does when it moves quickly. Landing exactly on target every time, from any distance, is not something a mouse produces.
+- `packet-rotations (risky)` — *default `false`, hidden until enabled*  
+  Turn only the server's idea of where you are looking and leave your screen still. It does that by sending a look packet of its own on top of the game's normal movement packet, and timer checks on anarchy servers count exactly that, so it is off by default. With it off your view turns for real and the game's own packet carries the aim, one movement packet a tick like normal play.
+- `vary-face` — *default `true`*  
+  When more than one neighbouring face would work, pick between them rather than always taking the same one. A build placed entirely off one face has a signature you can see in the packets.
+- `vary-hit-spot` — *default `true`*  
+  Aim at a different point within the face each time instead of dead centre. Cheap, and it removes another repeating number from every placement you send.
+- `reach` — *default `4.2`*  
+  How far away a block can be and still be placed. Vanilla allows a little under five, and going past that is rejected outright by most servers, so this stays inside it.
+
+**Support**
+
+- `scaffolding` — *default `true`*  
+  Where the schematic wants a block with nothing to place it against, put a temporary block underneath first. This is the honest way to build into open air — the alternative is asking the server to accept a block floating on nothing, which is what gets printers caught. If there is nothing to scaffold with, it simply builds the rest and comes back.
+- `remove-scaffolding` — *default `true`, hidden until enabled*  
+  Take the temporary blocks back out once the parts they were holding up are finished. Only the ones this module put down are touched, so it can never eat its own work.
+- `skip-if-no-support` — *default `true`, hidden until enabled*  
+  With scaffolding off, leave anything that has nothing to place against rather than trying anyway. Trying anyway is the easy-place behaviour this module exists to avoid.
+
+**Mistakes**
+
+- `misclicks` — *default `true`*  
+  Occasionally fumble one and take an extra moment before trying again. A build that goes down without a single hesitation over thousands of blocks is not something a person produces, and the cost is a handful of wasted ticks.
+- `misclick-chance` — *default `2`, hidden until enabled*  
+  How often that happens, as a percent.
+- `fatigue` — *default `true`*  
+  Slow down gradually over a long build, then recover after a pause. People do not hold the same rate for an hour, and a constant one across thousands of placements stands out more than any single packet does.
+- `attempts` — *default `3`*  
+  How many times to try one position before setting it aside. Retrying forever is what makes a stuck printer obvious, and it never fixes anything.
+- `come-back-later` — *default `true`*  
+  Send a position that failed to the back of the queue instead of giving up on it. Most failures are because something else is not built yet, so by the time it comes round again the problem has usually solved itself.
+- `fix-wrong-blocks` — *default `false`*  
+  Break and replace anything already standing where the schematic wants something else. Off builds around whatever is in the way, which is safer on a server where breaking is watched.
+- `report` — *default `true`*  
+  Say in chat what was placed, what was skipped and why, as it goes.
+
+**Render**
+
+- `preview` — *default `true`*  
+  Draw what is still to be built.
+- `preview-range` — *default `48`, hidden until enabled*  
+  How far the preview reaches, in blocks.
+- `todo-color` — *default `new SettingColor(90, 190, 255, 60`, hidden until enabled*  
+  Colour for blocks still to place.
+- `stuck-color` — *default `new SettingColor(255, 70, 70, 110`, hidden until enabled*  
+  Colour for the ones it gave up on, so you can see what needs a hand.
+
+
 ### swing-speed++
 
 Controls how fast your arm swings — a set speed, a fixed duration, or auto-timed to whatever you're doing (mining a block, attacking, or using any item like fireworks).
@@ -2567,6 +2709,8 @@ Client-side fakes for screenshots — a pay receipt that never sends, and a side
   Draw a sidebar of your own with whatever numbers you like. It is painted by this addon, so the server has no idea it is there.
 - `title` — *default `"Stats"`, hidden until enabled*  
   Heading at the top of the sidebar.
+- `lines` — *default `List.of("Balance: $1,204,000", "Kills: 1337", "Deaths: 0", "Playtime: 412h"`, hidden until enabled*  
+  Each entry is one row. Write them however you like, e.g. "Balance: $1,204,000".
 - `x` — *default `1400`, hidden until enabled*  
   Distance from the left of the screen.
 - `y` — *default `120`, hidden until enabled*  
