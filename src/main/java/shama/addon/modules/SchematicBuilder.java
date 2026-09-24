@@ -48,6 +48,13 @@ import java.util.Set;
  * It never spins on one spot.
  */
 public class SchematicBuilder extends Module {
+    public enum Walk {
+        /** You move yourself; it builds whatever comes within reach. */
+        Manual,
+        /** Baritone walks you to the next unfinished part, then stops so every block goes down by hand. */
+        Baritone
+    }
+
     private final SettingGroup sg = settings.getDefaultGroup();
 
     private final Setting<String> fileName = sg.add(new StringSetting.Builder()
@@ -198,6 +205,24 @@ public class SchematicBuilder extends Module {
         .description("Say in chat what was placed, what was skipped and why, as it goes.")
         .defaultValue(true).build());
 
+    // ---------------------------------------------------------------- walking
+    private final SettingGroup sgWalk = settings.createGroup("Walking");
+
+    private final Setting<Walk> walkMode = sgWalk.add(new EnumSetting.Builder<Walk>()
+        .name("movement")
+        .description("How you get around the build. Manual leaves the walking to you and builds whatever comes within reach. Baritone uses Baritone's pathfinding to take you to the next unfinished part — lowest layer first, nearest block first, the way its own build command goes about it — then stops, so every block still goes down through the same eased, humanised placement as manual. Baritone never places or breaks anything in the build itself.")
+        .defaultValue(Walk.Manual).build());
+
+    private final Setting<Integer> walkRange = sgWalk.add(new IntSetting.Builder()
+        .name("stop-distance")
+        .description("How close Baritone brings you to the next block before handing back, in blocks. It has to be inside your reach, and a little short of it looks less like a bot parking at the exact limit.")
+        .defaultValue(3).min(1).max(4).sliderRange(1, 4).visible(() -> walkMode.get() == Walk.Baritone).build());
+
+    private final Setting<Boolean> bridging = sgWalk.add(new BoolSetting.Builder()
+        .name("let-baritone-bridge (risky)")
+        .description("Allow Baritone to pillar and bridge with its throwaway blocks to reach higher layers. Without it, parts of the build Baritone cannot walk to are skipped with a message. With it, Baritone places those blocks at its own pace rather than through the humanised path — exactly what this module exists to avoid — and they can land inside the build, so it is off by default.")
+        .defaultValue(false).visible(() -> walkMode.get() == Walk.Baritone).build());
+
     // ---------------------------------------------------------------- render
     private final SettingGroup sgRender = settings.createGroup("Render");
 
@@ -240,11 +265,20 @@ public class SchematicBuilder extends Module {
     private int aimedFor;
     /** Every position the schematic wants filled, built or not. Scaffolding never touches these. */
     private final Set<Long> targetPositions = new HashSet<>();
+    /** Something being mined out: the wrong block in the way, or finished scaffolding. */
+    private BlockPos breaking;
+    private Direction breakFace;
+    private Target breakFor;
+    private int breakTicks, breakAimed;
+    /** Where Baritone is taking us, if anywhere. */
+    private boolean walking, warnedNoBaritone;
+    private BlockPos walkGoal;
+    private int walkIdle;
     private String status = "nothing loaded";
 
     public SchematicBuilder() {
         super(shama.addon.ShamaAddon.PLAYER, "schematic-builder++",
-            "Builds a litematica schematic through the ordinary placement path — real rotations eased into rather than snapped to, real faces, scaffolding instead of blocks floating on nothing, and a pace that wanders and tires.");
+            "Builds a litematica schematic through the ordinary placement path — real rotations eased into rather than snapped to, real faces, scaffolding instead of blocks floating on nothing, and a pace that wanders and tires. Can let Baritone do the walking while every block still goes down by hand.");
     }
 
     @Override
@@ -253,12 +287,17 @@ public class SchematicBuilder extends Module {
         timer = pausedFor = placed = skipped = sinceBreak = 0;
         aimStarted = false;
         clearLock();
+        breaking = null; breakFor = null; walking = false; walkGoal = null; warnedNoBaritone = false;
         status = "nothing loaded";
         loadNow.set(true);
     }
 
     @Override
-    public void onDeactivate() { queue.clear(); stuck.clear(); scaffoldPlaced.clear(); }
+    public void onDeactivate() {
+        stopWalking();
+        if (meteordevelopment.meteorclient.pathing.BaritoneUtils.IS_AVAILABLE) shama.addon.util.BaritoneBridge.restore();
+        queue.clear(); stuck.clear(); scaffoldPlaced.clear(); breaking = null; breakFor = null;
+    }
 
     // ================================================================ loading
 
@@ -406,9 +445,20 @@ public class SchematicBuilder extends Module {
     @EventHandler
     private void onTick(TickEvent.Post event) {
         if (loadNow.get()) { loadNow.set(false); load(); }
-        if (mc.player == null || mc.world == null || queue.isEmpty()) return;
+        if (mc.player == null || mc.world == null) return;
+        // Finished only when there is nothing to place, nothing to tidy up and nothing half-mined.
+        // Returning on an empty queue alone would skip taking the scaffolding back out.
+        if (queue.isEmpty() && scaffoldPlaced.isEmpty() && breaking == null) {
+            stopWalking();
+            if (meteordevelopment.meteorclient.pathing.BaritoneUtils.IS_AVAILABLE) shama.addon.util.BaritoneBridge.restore();
+            return;
+        }
 
         if (pausedFor > 0) { pausedFor--; return; }
+
+        // Mining something out comes first and carries on every tick until it is gone, the way a
+        // held button does. Nothing else happens while a block is half broken.
+        if (breaking != null) { mineStep(); return; }
 
         // Turn towards the block we have committed to, one step every tick, before anything else.
         // A turn still in progress is not a failed placement, so it is never counted against it.
@@ -442,10 +492,13 @@ public class SchematicBuilder extends Module {
 
         Target t = locked != null ? locked : nextReachable();
         if (t == null) {
-            // nothing left within reach; if the build is finished, take the scaffolding back out
-            if (queue.isEmpty() && cleanScaffold.get() && scaffold.get()) removeScaffolding();
+            boolean cleaning = queue.isEmpty() && cleanScaffold.get() && scaffold.get() && !scaffoldPlaced.isEmpty();
+            if (cleaning && removeScaffolding()) { stopWalking(); return; }
+            if (queue.isEmpty() && !cleaning) { scaffoldPlaced.clear(); stopWalking(); return; }
+            walkToWork(cleaning);                     // nothing in reach: go to where the work is
             return;
         }
+        stopWalking();                                // something is in reach: stand still and do it by hand
 
         BlockState here = mc.world.getBlockState(t.pos);
         boolean right = t.temp ? !here.isAir() : here.getBlock() == t.state.getBlock();
@@ -454,8 +507,7 @@ public class SchematicBuilder extends Module {
         if (!here.isAir()) {
             clearLock();
             if (!fixWrong.get()) { queue.remove(t); skipped++; return; }
-            mc.interactionManager.breakBlock(t.pos);
-            mc.player.swingHand(Hand.MAIN_HAND);
+            startBreaking(t.pos, t);                  // mined out over the next ticks, then placed
             return;
         }
 
@@ -500,27 +552,161 @@ public class SchematicBuilder extends Module {
      * Only the ones this module put down are touched, and only where the schematic did not want a
      * block anyway, so it can never eat its own work.
      */
-    private void removeScaffolding() {
-        if (scaffoldPlaced.isEmpty() || mc.player == null) return;
+    /** Start mining out the nearest finished scaffold block in reach. True if one was started. */
+    private boolean removeScaffolding() {
+        if (scaffoldPlaced.isEmpty() || mc.player == null) return false;
         double r2 = reach.get() * reach.get();
         Vec3d eye = mc.player.getEyePos();
         for (long k : new java.util.ArrayList<>(scaffoldPlaced)) {
             BlockPos p = BlockPos.fromLong(k);
-            if (eye.squaredDistanceTo(Vec3d.ofCenter(p)) > r2) continue;
             if (mc.world.getBlockState(p).isAir()) { scaffoldPlaced.remove(k); continue; }
             if (targetPositions.contains(k)) { scaffoldPlaced.remove(k); continue; }   // part of the build
-            mc.interactionManager.breakBlock(p);
-            mc.player.swingHand(Hand.MAIN_HAND);
+            if (eye.squaredDistanceTo(Vec3d.ofCenter(p)) > r2) continue;
             scaffoldPlaced.remove(k);
-            return;                                   // one a tick, same as everything else here
+            startBreaking(p, null);
+            return true;
         }
+        return false;
+    }
+
+    /** Point the aim at a spot, with the same noise, overshoot and easing as placing. */
+    private void aimAtPoint(Vec3d p) {
+        Vec3d eye = mc.player.getEyePos();
+        double dx = p.x - eye.x, dy = p.y - eye.y, dz = p.z - eye.z;
+        double flat = Math.sqrt(dx * dx + dz * dz);
+        float n = aimNoise.get().floatValue();
+        float yaw = (float) Math.toDegrees(Math.atan2(dz, dx)) - 90f + shama.addon.util.Humanize.rotationNoise(n);
+        float pitch = clampPitch((float) -Math.toDegrees(Math.atan2(dy, flat)) + shama.addon.util.Humanize.rotationNoise(n));
+        if (!aimStarted) { curYaw = mc.player.getYaw(); curPitch = mc.player.getPitch(); aimStarted = true; }
+        settleYaw = yaw; settlePitch = pitch; settlePending = false;
+        aimYaw = yaw; aimPitch = pitch;
+        if (smoothTurning.get() && overshoot.get() && Math.abs(wrap(yaw - curYaw)) > 25f) {
+            aimYaw = yaw + (wrap(yaw - curYaw) > 0 ? 3f : -3f);
+            settlePending = true;
+        }
+        if (!smoothTurning.get()) { curYaw = yaw; curPitch = pitch; applyRotation(); }
+    }
+
+    /** Begin mining a block out, aiming at the face that points back towards you. */
+    private void startBreaking(BlockPos pos, Target forTarget) {
+        clearLock();
+        breaking = pos; breakFor = forTarget; breakTicks = 0; breakAimed = 0;
+        Vec3d d = mc.player.getEyePos().subtract(Vec3d.ofCenter(pos));
+        double ax = Math.abs(d.x), ay = Math.abs(d.y), az = Math.abs(d.z);
+        breakFace = (ay >= ax && ay >= az) ? (d.y > 0 ? Direction.UP : Direction.DOWN)
+                  : (ax >= az) ? (d.x > 0 ? Direction.EAST : Direction.WEST)
+                  : (d.z > 0 ? Direction.SOUTH : Direction.NORTH);
+        if (sendRotations.get()) aimAtPoint(Vec3d.ofCenter(pos));
+    }
+
+    /**
+     * Keep mining one block, a tick at a time, until it is gone.
+     *
+     * This goes through the game's own held-break path, which is what actually tells the server a
+     * block is being mined. Removing a block client-side alone looks like it worked and leaves it
+     * standing on the server. A block that will not come out in ten seconds is given up on.
+     */
+    private void mineStep() {
+        if (mc.world.getBlockState(breaking).isAir()) { breaking = null; breakFor = null; return; }
+        boolean outOfReach = mc.player.getEyePos().squaredDistanceTo(Vec3d.ofCenter(breaking)) > reach.get() * reach.get();
+        if (++breakTicks > 200 || outOfReach) {
+            if (breakFor != null) retire(breakFor, "could not break what was in the way");
+            breaking = null; breakFor = null;
+            return;
+        }
+        if (sendRotations.get()) {
+            if (!turnStep()) { breakAimed = 0; return; }         // still turning towards it
+            if (++breakAimed < 2) return;                        // let the server see the aim first
+            if (packetRotations.get() && breakAimed == 2)
+                mc.getNetworkHandler().sendPacket(new PlayerMoveC2SPacket.LookAndOnGround(
+                    curYaw, clampPitch(curPitch), mc.player.isOnGround(), false));
+        }
+        mc.interactionManager.updateBlockBreakingProgress(breaking, breakFace);
+        mc.player.swingHand(Hand.MAIN_HAND);
+    }
+
+    // ---------------------------------------------------------------- baritone walking
+
+    /**
+     * Nothing is in reach: ask Baritone to take us to where the work is.
+     *
+     * Only walking is handed over. Baritone is told not to break anything and, unless bridging is
+     * allowed, not to place anything, so every block in the build still goes down through the
+     * humanised placement above. If Baritone cannot get somewhere, that block is sent round again and
+     * eventually set aside, the same as any other failure — it never keeps trying one spot.
+     */
+    private void walkToWork(boolean cleaning) {
+        if (walkMode.get() != Walk.Baritone) return;
+        if (!meteordevelopment.meteorclient.pathing.BaritoneUtils.IS_AVAILABLE) {
+            if (!warnedNoBaritone && report.get())
+                shama.addon.util.Chat.warning("[Builder] Baritone is not installed, so you will have to walk to the next part yourself");
+            warnedNoBaritone = true;
+            return;
+        }
+        BlockPos goal = cleaning ? nearestScaffold() : nextWork();
+        if (goal == null) return;
+
+        if (walking && goal.equals(walkGoal)) {
+            if (shama.addon.util.BaritoneBridge.isPathing()) { walkIdle = 0; return; }
+            if (++walkIdle < 40) return;
+            // Baritone has stopped and it is still out of reach: it could not get there
+            walkIdle = 0;
+            Target stuckAt = targetAt(goal);
+            if (stuckAt != null) {
+                if (++stuckAt.tries >= attempts.get()) retire(stuckAt, "Baritone could not get there");
+                else { queue.remove(stuckAt); queue.add(stuckAt); }
+            } else scaffoldPlaced.remove(goal.asLong());
+            walking = false; walkGoal = null;
+            return;
+        }
+        shama.addon.util.BaritoneBridge.handsOff(bridging.get());
+        shama.addon.util.BaritoneBridge.walkNear(goal, walkRange.get());
+        walking = true; walkGoal = goal; walkIdle = 0;
+    }
+
+    private void stopWalking() {
+        if (!walking) return;
+        walking = false; walkGoal = null;
+        if (meteordevelopment.meteorclient.pathing.BaritoneUtils.IS_AVAILABLE) shama.addon.util.BaritoneBridge.stop();
+    }
+
+    /** The lowest unfinished layer, and the nearest block in it: build from the ground up. */
+    private BlockPos nextWork() {
+        int minY = Integer.MAX_VALUE;
+        for (Target q : queue) minY = Math.min(minY, q.pos.getY());
+        Vec3d eye = mc.player.getEyePos();
+        Target best = null; double bd = Double.MAX_VALUE;
+        for (Target q : queue) {
+            if (q.pos.getY() != minY) continue;
+            double d = eye.squaredDistanceTo(Vec3d.ofCenter(q.pos));
+            if (d < bd) { bd = d; best = q; }
+        }
+        return best == null ? null : best.pos;
+    }
+
+    private BlockPos nearestScaffold() {
+        Vec3d eye = mc.player.getEyePos();
+        BlockPos best = null; double bd = Double.MAX_VALUE;
+        for (long k : scaffoldPlaced) {
+            BlockPos p = BlockPos.fromLong(k);
+            double d = eye.squaredDistanceTo(Vec3d.ofCenter(p));
+            if (d < bd) { bd = d; best = p; }
+        }
+        return best;
+    }
+
+    private Target targetAt(BlockPos pos) {
+        for (Target q : queue) if (q.pos.equals(pos)) return q;
+        return null;
     }
 
     /** The first thing in the queue that is close enough to actually reach. */
     private Target nextReachable() {
         double r2 = reach.get() * reach.get();
         Vec3d eye = mc.player.getEyePos();
+        BlockPos feet = mc.player.getBlockPos();
         for (Target t : queue) {
+            if (t.pos.equals(feet) || t.pos.equals(feet.up())) continue;   // you are standing in it
             if (eye.squaredDistanceTo(Vec3d.ofCenter(t.pos)) <= r2) return t;
         }
         return null;
