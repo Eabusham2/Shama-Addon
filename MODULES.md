@@ -56,7 +56,7 @@ Tells a chunk somebody is holding open from one nobody has touched, by reading t
 
 - `box-y` — *default `63`*  
   Height to draw the boxes at. Sea level by default so they sit where you can see them.
-- `color` — *default `new SettingColor(90, 0, 160, 90`*  
+- `color` — *default `rgba(90, 0, 160, 90)`*  
   Colour of the trace boxes.
 - `shape-mode` — *default `ShapeMode.Both`*  
   Outline only, filled sides only, or both.
@@ -93,9 +93,9 @@ Learns what ordinary ground looks like on this server, then flags the chunks tha
   How far out to keep showing flagged chunks, in chunks.
 - `box-y` — *default `63`*  
   Height to draw the boxes at. Sea level by default.
-- `weak-color` — *default `new SettingColor(255, 220, 60, 70`*  
+- `weak-color` — *default `rgba(255, 220, 60, 70)`*  
   Colour for a chunk that only just crosses the line.
-- `strong-color` — *default `new SettingColor(255, 60, 60, 110`*  
+- `strong-color` — *default `rgba(255, 60, 60, 110)`*  
   Colour for a chunk far outside normal — the ones worth flying to.
 - `shape-mode` — *default `ShapeMode.Both`*  
   Outline only, filled sides only, or both.
@@ -139,19 +139,7 @@ Recovers blocks the server left out of your chunk data. It listens to the messag
   Only keep what is under the height below, which is where the ground gets replaced.
 - `below-y` — *default `0`, hidden until enabled*  
   The height that limit uses.
-- `blocks` — *default `List.of(
-            net.minecraft.item.Items.CHEST, net.minecraft.item.Items.TRAPPED_CHEST,
-            net.minecraft.item.Items.BARREL, net.minecraft.item.Items.ENDER_CHEST,
-            net.minecraft.item.Items.SHULKER_BOX, net.minecraft.item.Items.HOPPER,
-            net.minecraft.item.Items.FURNACE, net.minecraft.item.Items.BLAST_FURNACE,
-            net.minecraft.item.Items.SMOKER, net.minecraft.item.Items.BREWING_STAND,
-            net.minecraft.item.Items.SPAWNER, net.minecraft.item.Items.BEACON,
-            net.minecraft.item.Items.CONDUIT, net.minecraft.item.Items.ENCHANTING_TABLE,
-            net.minecraft.item.Items.ANVIL, net.minecraft.item.Items.AMETHYST_CLUSTER,
-            net.minecraft.item.Items.BUDDING_AMETHYST, net.minecraft.item.Items.AMETHYST_BLOCK,
-            net.minecraft.item.Items.POINTED_DRIPSTONE, net.minecraft.item.Items.ANCIENT_DEBRIS,
-            net.minecraft.item.Items.DIAMOND_ORE, net.minecraft.item.Items.DEEPSLATE_DIAMOND_ORE,
-            net.minecraft.item.Items.OBSIDIAN, net.minecraft.item.Items.CRYING_OBSIDIAN`*  
+- `blocks` — *default `chest, trapped_chest, barrel, ender_chest, shulker_box, hopper, furnace, blast_furnace, smoker, brewing_stand, spawner, beacon, conduit, enchanting_table, anvil, amethyst_cluster, budding_amethyst, amethyst_block, pointed_dripstone, ancient_debris, diamond_ore, deepslate_diamond_ore, obsidian, crying_obsidian`*  
   Which blocks are worth recovering. Anything not here is ignored even when the server slips up and mentions it. It is an item picker, matched against the block's item form.
 
 **Force Data**
@@ -171,9 +159,9 @@ Recovers blocks the server left out of your chunk data. It listens to the messag
 
 **Render**
 
-- `block-color` — *default `new SettingColor(0, 255, 140, 220`*  
+- `block-color` — *default `rgba(0, 255, 140, 220)`*  
   Colour for blocks recovered from change or block-entity packets.
-- `hint-color` — *default `new SettingColor(255, 190, 0, 180`*  
+- `hint-color` — *default `rgba(255, 190, 0, 180)`*  
   Colour for positions recovered from particles or sounds, where the exact block is unknown.
 - `shape-mode` — *default `ShapeMode.Both`*  
   Outline only, filled sides only, or both.
@@ -199,7 +187,7 @@ Flags chunks emitting heavy particle activity (working bases).
   Length of the counting window, in ticks.
 - `box-y` — *default `64`*  
   The Y height to draw the box/marker at.
-- `line-color` — *default `new SettingColor(255, 90, 255, 220`*  
+- `line-color` — *default `rgba(255, 90, 255, 220)`*  
   Colour of the box outline.
 
 
@@ -236,11 +224,11 @@ Finds chests, hoppers, spawners and other containers below a set height — a st
   Line from camera to each find.
 - `shape-mode` — *default `ShapeMode.Both`*  
   Box fill/outline.
-- `fill-color` — *default `new SettingColor(225, 0, 255, 40`*  
+- `fill-color` — *default `rgba(225, 0, 255, 40)`*  
   Colour of the filled faces of each box.
-- `line-color` — *default `new SettingColor(225, 0, 255, 255`*  
+- `line-color` — *default `rgba(225, 0, 255, 255)`*  
   Box outline.
-- `tracer-color` — *default `new SettingColor(225, 0, 255, 160`*  
+- `tracer-color` — *default `rgba(225, 0, 255, 160)`*  
   Tracer line.
 - `mark-deep-chunks` — *default `false`*  
   Draw a flat box at sea level over any chunk that holds a block entity below deep-y, once it's past box range. Lets you spot deep-stash chunks from high ground / across the map.
@@ -250,7 +238,7 @@ Finds chests, hoppers, spawners and other containers below a set height — a st
   Y level to draw the chunk box at (sea level by default).
 - `box-distance` — *default `1024`, hidden until enabled*  
   Max horizontal distance to draw deep-chunk boxes.
-- `box-color` — *default `new SettingColor(255, 60, 60, 220`, hidden until enabled*  
+- `box-color` — *default `rgba(255, 60, 60, 220)`, hidden until enabled*  
   Deep-chunk box color.
 
 **Hoppers**
@@ -259,7 +247,7 @@ Finds chests, hoppers, spawners and other containers below a set height — a st
   Read the comparator signal coming off nearby hoppers. A hopper that reports a changing signal is moving items, which gives away a sorting system or an active farm even when the storage behind it is walled in. Also available on its own as hopper-debug++; running both is harmless.
 - `min-hoppers` — *default `4`, hidden until enabled*  
   How many hoppers must sit together before it's worth reporting.
-- `hopper-color` — *default `new SettingColor(255, 200, 60, 200`, hidden until enabled*  
+- `hopper-color` — *default `rgba(255, 200, 60, 200)`, hidden until enabled*  
   Colour used for hopper clusters.
 
 **Hidden Storage**
@@ -270,7 +258,7 @@ Finds chests, hoppers, spawners and other containers below a set height — a st
   How many unseen containers a chunk needs before it's reported.
 - `pinpoint` — *default `true`, hidden until enabled*  
   Box each unseen container individually instead of just marking the chunk, so you know exactly where to dig.
-- `hidden-color` — *default `new SettingColor(255, 0, 200, 220`, hidden until enabled*  
+- `hidden-color` — *default `rgba(255, 0, 200, 220)`, hidden until enabled*  
   Colour used for unseen containers.
 
 **Dense Chunks**
@@ -281,7 +269,7 @@ Finds chests, hoppers, spawners and other containers below a set height — a st
   How many block entities a chunk needs before it counts as a stash.
 - `stash-marker-y` — *default `64`, hidden until enabled*  
   Y height to draw the dense-chunk marker at.
-- `stash-color` — *default `new SettingColor(255, 0, 120, 200`, hidden until enabled*  
+- `stash-color` — *default `rgba(255, 0, 120, 200)`, hidden until enabled*  
   Colour of the dense-chunk marker.
 
 **Depth Guard**
@@ -300,11 +288,11 @@ Boxes blocks being broken, shrinking with progress.
 
 **General**
 
-- `color-at-start` — *default `new SettingColor(255, 0, 0, 30`*  
+- `color-at-start` — *default `rgba(255, 0, 0, 30)`*  
   Colour at the start (0% progress).
-- `color-when-done` — *default `new SettingColor(0, 255, 0, 60`*  
+- `color-when-done` — *default `rgba(0, 255, 0, 60)`*  
   Colour at the end (100% progress).
-- `line-color` — *default `new SettingColor(255, 255, 255, 200`*  
+- `line-color` — *default `rgba(255, 255, 255, 200)`*  
   Colour of the box outline.
 - `shape-mode` — *default `ShapeMode.Both`*  
   How boxes are drawn: outline only, filled sides only, or both.
@@ -354,7 +342,7 @@ Base/stash chunk finder with selectable detection methods (geology, entities, gr
   Highlight patches of blocks laid out flat, the way a floor or a platform is. Terrain almost never produces a level slab of one material, so a flat patch is somebody having built one. The patch is drawn where it actually is rather than the whole chunk, and it can sit at any height: a floor, a roof, or a landing partway up a shaft.
 - `flat-min-blocks` — *default `20`, hidden until enabled*  
   How many blocks a level patch needs before it counts. Small numbers pick up natural ledges; a proper floor is much bigger than that.
-- `flat-color` — *default `new SettingColor(60, 130, 255, 90`, hidden until enabled*  
+- `flat-color` — *default `rgba(60, 130, 255, 90)`, hidden until enabled*  
   Colour used for those patches.
 - `method-unnatural` — *default `true`, hidden until enabled*  
   Blocks that do not generate underground: cobblestone, planks of any wood, torches, rails, ladders and crafting tables. None of it forms naturally down there, so a cluster of it is somebody's build. From the PlayerChunkFinder approach in the shared files.
@@ -412,13 +400,13 @@ Base/stash chunk finder with selectable detection methods (geology, entities, gr
   Print a message in chat when a new suspicious chunk is found.
 - `shape-mode` — *default `ShapeMode.Both`*  
   How the boxes are drawn: outline only, filled sides only, or both.
-- `fill-color` — *default `new SettingColor(0, 255, 255, 90`*  
+- `fill-color` — *default `rgba(0, 255, 255, 90)`*  
   The colour of the filled/shaded part of the box.
-- `line-color` — *default `new SettingColor(0, 255, 255, 255`*  
+- `line-color` — *default `rgba(0, 255, 255, 255)`*  
   The colour of the box outline.
 - `highlight-blocks` — *default `false`*  
   Instead of only a chunk box, colour each individual anomaly block (deepslate/cobbled/rotated) inside a flagged chunk.
-- `highlight-color` — *default `new SettingColor(255, 255, 0, 160`, hidden until enabled*  
+- `highlight-color` — *default `rgba(255, 255, 0, 160)`, hidden until enabled*  
   The colour used when highlighting the individual suspicious blocks inside a chunk.
 
 
@@ -515,17 +503,17 @@ Everything block-update based, each its own tick: hidden chunk activity below a 
   How far out to look for amethyst, in blocks.
 - `amethyst-scan-ticks` — *default `40`, hidden until enabled*  
   Ticks between amethyst sweeps.
-- `budding-color` — *default `new SettingColor(255, 90, 220, 220`, hidden until enabled*  
+- `budding-color` — *default `rgba(255, 90, 220, 220)`, hidden until enabled*  
   Colour for budding amethyst.
-- `small-color` — *default `new SettingColor(120, 80, 200, 200`, hidden until enabled*  
+- `small-color` — *default `rgba(120, 80, 200, 200)`, hidden until enabled*  
   Colour for a small bud — just started.
-- `medium-color` — *default `new SettingColor(160, 90, 230, 210`, hidden until enabled*  
+- `medium-color` — *default `rgba(160, 90, 230, 210)`, hidden until enabled*  
   Colour for a medium bud.
-- `large-color` — *default `new SettingColor(200, 110, 245, 220`, hidden until enabled*  
+- `large-color` — *default `rgba(200, 110, 245, 220)`, hidden until enabled*  
   Colour for a large bud — nearly grown.
-- `grown-color` — *default `new SettingColor(240, 150, 255, 235`, hidden until enabled*  
+- `grown-color` — *default `rgba(240, 150, 255, 235)`, hidden until enabled*  
   Colour for a fully-grown cluster, the one worth breaking.
-- `block-color` — *default `new SettingColor(150, 110, 190, 120`, hidden until enabled*  
+- `block-color` — *default `rgba(150, 110, 190, 120)`, hidden until enabled*  
   Colour for plain amethyst blocks.
 
 **Mobs**
@@ -558,7 +546,7 @@ Everything block-update based, each its own tick: hidden chunk activity below a 
   Once a zone has flagged several times it's almost certainly a base, not a passer-by. Lock it so it stays highlighted even after the activity stops and you move away.
 - `lock-after` — *default `3`, hidden until enabled*  
   How many separate flags a zone needs before it locks.
-- `locked-color` — *default `new SettingColor(255, 60, 60, 90`, hidden until enabled*  
+- `locked-color` — *default `rgba(255, 60, 60, 90)`, hidden until enabled*  
   Colour used for locked zones.
 
 **Raw Positions**
@@ -569,7 +557,7 @@ Everything block-update based, each its own tick: hidden chunk activity below a 
   Only box raw positions that are below the Y level above. Turn off to see updates at any height.
 - `fade-ticks` — *default `100`, hidden until enabled*  
   How long each position stays visible, in ticks.
-- `update-box-color` — *default `new SettingColor(0, 255, 255, 200`, hidden until enabled*  
+- `update-box-color` — *default `rgba(0, 255, 255, 200)`, hidden until enabled*  
   Colour of the raw update boxes.
 
 **Mining Alerts**
@@ -593,9 +581,9 @@ Everything block-update based, each its own tick: hidden chunk activity below a 
 
 - `render-distance` — *default `256`*  
   How far away (in blocks) things are still drawn.
-- `line-color` — *default `new SettingColor(255, 60, 60, 220`*  
+- `line-color` — *default `rgba(255, 60, 60, 220)`*  
   Colour of the box outline.
-- `fill-color` — *default `new SettingColor(255, 60, 60, 45`*  
+- `fill-color` — *default `rgba(255, 60, 60, 45)`*  
   Colour of the filled part of the box.
 
 
@@ -615,7 +603,7 @@ Collects every find from every detection module into one list with coordinates, 
   Drop a find from the list after this many minutes. Set it high if you want a record of a whole session.
 - `max-distance` — *default `0`*  
   Ignore finds further away than this, in blocks. 0 keeps everything however far it was.
-- `ignore` — *default `List.of(`*  
+- `ignore` — *default `empty`*  
   Skip finds whose text contains any of these. Useful for muting one noisy detector without turning it off.
 
 **Panel**
@@ -630,9 +618,9 @@ Collects every find from every detection module into one list with coordinates, 
   Put the module that found it in front of each row.
 - `show-age` — *default `true`, hidden until enabled*  
   Show how long ago each find happened.
-- `background` — *default `new SettingColor(0, 0, 0, 140`, hidden until enabled*  
+- `background` — *default `rgba(0, 0, 0, 140)`, hidden until enabled*  
   Colour behind the list.
-- `text-color` — *default `new SettingColor(190, 235, 255, 255`, hidden until enabled*  
+- `text-color` — *default `rgba(190, 235, 255, 255)`, hidden until enabled*  
   Colour of the rows.
 
 **In World**
@@ -641,7 +629,7 @@ Collects every find from every detection module into one list with coordinates, 
   Box every logged find in the world, so a whole session's discoveries stay visible at once even after each module has forgotten its own.
 - `beams` — *default `false`, hidden until enabled*  
   Shoot a beam up from each one so you can see them over terrain.
-- `marker-color` — *default `new SettingColor(120, 220, 255, 90`, hidden until enabled*  
+- `marker-color` — *default `rgba(120, 220, 255, 90)`, hidden until enabled*  
   Colour of those markers.
 
 
@@ -670,25 +658,25 @@ Marks amethyst so you can tell a farmed geode from an untouched one — colour e
   Show budding amethyst — the block the crystals grow out of. It can't be mined, so a geode stripped down to bare budding blocks is one somebody farms.
 - `amethyst-blocks` — *default `false`*  
   Show plain amethyst blocks too. Geodes are full of them, so this gets noisy.
-- `budding-color` — *default `new SettingColor(255, 90, 220, 220`, hidden until enabled*  
+- `budding-color` — *default `rgba(255, 90, 220, 220)`, hidden until enabled*  
   Colour for budding amethyst.
-- `small-color` — *default `new SettingColor(120, 80, 200, 200`*  
+- `small-color` — *default `rgba(120, 80, 200, 200)`*  
   Colour for a small bud — just started growing.
-- `medium-color` — *default `new SettingColor(160, 90, 230, 210`*  
+- `medium-color` — *default `rgba(160, 90, 230, 210)`*  
   Colour for a medium bud.
-- `large-color` — *default `new SettingColor(200, 110, 245, 220`*  
+- `large-color` — *default `rgba(200, 110, 245, 220)`*  
   Colour for a large bud — nearly grown.
-- `grown-color` — *default `new SettingColor(240, 150, 255, 235`*  
+- `grown-color` — *default `rgba(240, 150, 255, 235)`*  
   Colour for a fully-grown cluster, the one worth breaking.
-- `block-color` — *default `new SettingColor(150, 110, 190, 120`, hidden until enabled*  
+- `block-color` — *default `rgba(150, 110, 190, 120)`, hidden until enabled*  
   Colour for plain amethyst blocks.
 - `clean-clusters` — *default `false`*  
   Mark clusters that still have growing buds on them in their own colour. A cluster nobody has touched keeps its part-grown shards; one that gets harvested is snapped off the moment it matures, so leftover partial growth means that spot is being left alone.
-- `clean-color` — *default `new SettingColor(80, 255, 180, 230`, hidden until enabled*  
+- `clean-color` — *default `rgba(80, 255, 180, 230)`, hidden until enabled*  
   Colour for those untouched clusters.
 - `stripped-geodes` — *default `false`*  
   Mark geodes with no budding amethyst left at all. Budding blocks cannot be mined with anything ordinary, so a geode without them has been deliberately cleared out — that is somebody working it, not natural.
-- `stripped-color` — *default `new SettingColor(180, 0, 0, 200`, hidden until enabled*  
+- `stripped-color` — *default `rgba(180, 0, 0, 200)`, hidden until enabled*  
   Colour for a geode that has been stripped of its budding blocks.
 - `anti-growth-esp-bypass` — *default `true`*  
   Keep showing amethyst the server has stopped sending. Some servers only send it while you are level with it or looking down at it, so it vanishes the moment you rise above. This remembers what was there and keeps drawing it rather than letting it blink out.
@@ -705,14 +693,14 @@ Marks amethyst so you can tell a farmed geode from an untouched one — colour e
   Only mark dripstone that has grown longer than it naturally would. A stalactite only lengthens while its chunk stays loaded, so a long one means somebody has been holding that ground open — the same tell as overgrown kelp or sugar cane. Natural caves are full of short dripstone, so leave this on.
 - `min-length` — *default `5`, hidden until enabled*  
   How many blocks long a stalactite or stalagmite must be to count. Natural growth rarely passes four without somebody keeping the chunk loaded.
-- `dripstone-color` — *default `new SettingColor(200, 160, 120, 200`, hidden until enabled*  
+- `dripstone-color` — *default `rgba(200, 160, 120, 200)`, hidden until enabled*  
   Colour used for dripstone.
 
 **Geode**
 
 - `pillar` — *default `false`*  
   Shoot a beam up from each geode so you can spot one from across the map instead of only when you are on top of it. Taken from the shared AmethystESP.
-- `pillar-color` — *default `new SettingColor(180, 100, 255, 90`, hidden until enabled*  
+- `pillar-color` — *default `rgba(180, 100, 255, 90)`, hidden until enabled*  
   Colour of that beam.
 - `toast` — *default `false`*  
   Raise a popup in the corner when a geode is found, with the cluster count and an amethyst icon. Quieter than a title across the middle of the screen.
@@ -736,9 +724,9 @@ Marks amethyst so you can tell a farmed geode from an untouched one — colour e
   What counts as underground.
 - `tracers` — *default `false`*  
   Draw a line from you to each geode. From the shared AmethystESP, and useful when a geode is behind terrain and the beam alone is hard to place.
-- `tracer-color` — *default `new SettingColor(180, 100, 255, 160`, hidden until enabled*  
+- `tracer-color` — *default `rgba(180, 100, 255, 160)`, hidden until enabled*  
   Colour of those lines.
-- `geode-color` — *default `new SettingColor(255, 60, 255, 90`*  
+- `geode-color` — *default `rgba(255, 60, 255, 90)`*  
   Colour of the box drawn around a whole geode.
 
 
@@ -755,7 +743,7 @@ Spots players moving around underground where you can't see them, by picking up 
 
 - `chat` — *default `true`*  
   Print a message in chat.
-- `color` — *default `new SettingColor(255, 40, 40, 120`*  
+- `color` — *default `rgba(255, 40, 40, 120)`*  
   Highlight colour.
 
 **Vanished Staff**
@@ -809,14 +797,14 @@ Finds shafts someone dug and then plugged behind them, and marks the exact block
   Tallest pocket to count, in blocks. One or two is the giveaway — anything taller is usually just a cave.
 - `pocket-min-y` — *default `-64`, hidden until enabled*  
   Ignore pockets above this height. Sealed air near the surface is usually part of a build rather than something hidden.
-- `pocket-color` — *default `new SettingColor(255, 220, 0, 220`, hidden until enabled*  
+- `pocket-color` — *default `rgba(255, 220, 0, 220)`, hidden until enabled*  
   Colour used for sealed pockets.
 
 **Render**
 
-- `fill-color` — *default `new SettingColor(40, 90, 255, 90`*  
+- `fill-color` — *default `rgba(40, 90, 255, 90)`*  
   Colour of the filled faces on each capping block.
-- `line-color` — *default `new SettingColor(60, 120, 255, 230`*  
+- `line-color` — *default `rgba(60, 120, 255, 230)`*  
   Colour of the outline on each capping block.
 - `shape-mode` — *default `ShapeMode.Both`*  
   Outline only, filled sides only, or both.
@@ -851,7 +839,7 @@ Finds hoppers and reads the signal strength around them, which gives away sortin
 
 - `chunk-y-level` — *default `55.0`*  
   Y level for chunk mark.
-- `color` — *default `new SettingColor(255, 140, 0, 120`*  
+- `color` — *default `rgba(255, 140, 0, 120)`*  
   Highlight colour.
 
 
@@ -895,9 +883,9 @@ Everything to do with light in one place: light sources, where mobs can spawn, a
   A block counts as spawnable if its light level is at or below this. 0 = only fully dark blocks (vanilla spawning rule).
 - `spawn-boxes` — *default `false`, hidden until enabled*  
   Draw a flat box on each spawnable block instead of a cross (easier to see when spawn-proofing).
-- `always-color` — *default `new SettingColor(255, 50, 50, 200`, hidden until enabled*  
+- `always-color` — *default `rgba(255, 50, 50, 200)`, hidden until enabled*  
   Colour for spots that spawn mobs any time of day.
-- `night-color` — *default `new SettingColor(255, 220, 60, 200`, hidden until enabled*  
+- `night-color` — *default `rgba(255, 220, 60, 200)`, hidden until enabled*  
   Colour for spots that only spawn mobs at night.
 
 **Dark Chunks**
@@ -908,7 +896,7 @@ Everything to do with light in one place: light sources, where mobs can spawn, a
   Only look at blocks below this Y for hidden light.
 - `dark-sensitivity` — *default `1`, hidden until enabled*  
   How faint a light counts. 1 = catch everything, higher = only brighter sources.
-- `dark-color` — *default `new SettingColor(255, 160, 0, 200`, hidden until enabled*  
+- `dark-color` — *default `rgba(255, 160, 0, 200)`, hidden until enabled*  
   Colour used for flagged dark chunks.
 
 
@@ -927,7 +915,7 @@ Finds 512x512 regions that have an unusual number of chunks loaded — chunk loa
   The Y height to draw the box/marker at.
 - `render-distance` — *default `2048`*  
   How far away (in blocks) things are still drawn.
-- `line-color` — *default `new SettingColor(0, 255, 0, 200`*  
+- `line-color` — *default `rgba(0, 255, 0, 200)`*  
   Colour of the box outline.
 
 
@@ -939,7 +927,7 @@ Marks where other players log out.
 
 - `chat` — *default `true`*  
   Print a chat message on a new find.
-- `color` — *default `new SettingColor(255, 0, 255, 90`*  
+- `color` — *default `rgba(255, 0, 255, 90)`*  
   Highlight colour.
 
 
@@ -951,7 +939,7 @@ Detects nearby ocean monuments by spotting guardian entities (their only habitat
 
 - `scan-radius` — *default `128`*  
   How far out to scan, in chunks.
-- `color` — *default `new SettingColor(0, 180, 255, 200`*  
+- `color` — *default `rgba(0, 180, 255, 200)`*  
   Highlight colour.
 
 
@@ -990,9 +978,9 @@ Predicts where ores are from the world seed, accurate to vanilla generation. Ent
   Draw outlines, filled sides, or both.
 - `fill-opacity` — *default `40`, hidden until enabled*  
   Fill opacity used when color-by-ore is on (and shape-mode includes sides).
-- `fill-color` — *default `new SettingColor(255, 255, 255, 40`, hidden until enabled*  
+- `fill-color` — *default `rgba(255, 255, 255, 40)`, hidden until enabled*  
   Box fill color (used when color-by-ore is off).
-- `line-color` — *default `new SettingColor(255, 255, 255, 200`, hidden until enabled*  
+- `line-color` — *default `rgba(255, 255, 255, 200)`, hidden until enabled*  
   Box outline color (used when color-by-ore is off).
 
 
@@ -1052,7 +1040,7 @@ Highlights particles spawning underground while you're above ground (someone is 
   Fade the highlight as the spot gets older.
 - `color-mode` — *default `ColorMode.ByParticleType`*  
   Custom = one colour you pick. By-particle-type = each particle type gets its own colour, guessed from what that particle actually looks like (flame = orange, smoke = grey, etc).
-- `color` — *default `new SettingColor(0, 255, 200, 220`, hidden until enabled*  
+- `color` — *default `rgba(0, 255, 200, 220)`, hidden until enabled*  
   The colour used when colour-mode is Custom.
 - `real-color-blend` — *default `60`, hidden until enabled*  
   For particles that carry a real colour in the packet (redstone dust, potion effects...), how much of that real colour to use. 100 = the particle's actual colour, 0 = ignore it and use the hand-picked colour for that type. In between = a mix. Types whose real colour is already exactly right (dust, potion effects) always use it fully.
@@ -1081,7 +1069,7 @@ Popup / sound / chat when another player renders near you.
   Only count entities that also appear in the server's player list. NPCs, shop holograms and other fake players look identical to real ones in the world, and they are the usual reason this module cries wolf.
 - `range` — *default `128`*  
   Alert when a player is within this many blocks.
-- `whitelist` — *default `List.of(`*  
+- `whitelist` — *default `empty`*  
   Player names to ignore (case-insensitive).
 - `popup` — *default `true`*  
   Show an on-screen title popup.
@@ -1093,7 +1081,7 @@ Popup / sound / chat when another player renders near you.
   Box the chunk each nearby player is standing in.
 - `fill-chunk` — *default `true`, hidden until enabled*  
   Fill the player's chunk box instead of just outlining it.
-- `chunk-color` — *default `new SettingColor(255, 60, 60, 180`, hidden until enabled*  
+- `chunk-color` — *default `rgba(255, 60, 60, 180)`, hidden until enabled*  
   Colour of the player's chunk box.
 - `sound` — *default `true`*  
   Play an alert sound.
@@ -1111,24 +1099,13 @@ Highlights valuable items on the ground or in item frames, and can beam them so 
   Also find rare blocks that have been placed in the world — a beacon someone built, a sponge wall, heads on display, gilded blackstone. These never appear as dropped items, so without this they're invisible.
 - `placed-range` — *default `64`, hidden until enabled*  
   How far out to look for placed rare blocks, in blocks.
-- `placed-color` — *default `new SettingColor(255, 160, 0, 255`, hidden until enabled*  
+- `placed-color` — *default `rgba(255, 160, 0, 255)`, hidden until enabled*  
   Colour used for placed rare blocks.
 - `find-framed` — *default `true`*  
   Highlight rare items displayed in item frames — people put their best gear on show.
 - `scan-ticks` — *default `20`*  
   Ticks between sweeps for dropped and framed items.
-- `items` — *default `List.of(
-            Items.DRAGON_EGG, Items.DRAGON_HEAD, Items.WITHER_SKELETON_SKULL, Items.PLAYER_HEAD,
-            Items.SKELETON_SKULL, Items.ZOMBIE_HEAD, Items.CREEPER_HEAD, Items.PIGLIN_HEAD,
-            Items.ELYTRA, Items.NETHER_STAR, Items.HEART_OF_THE_SEA, Items.BEACON, Items.CONDUIT,
-            Items.ENCHANTED_GOLDEN_APPLE, Items.TRIDENT, Items.NETHERITE_INGOT, Items.NETHERITE_SCRAP,
-            Items.NETHERITE_BLOCK, Items.NETHERITE_HELMET, Items.NETHERITE_CHESTPLATE, Items.NETHERITE_LEGGINGS,
-            Items.NETHERITE_BOOTS, Items.NETHERITE_SWORD, Items.NETHERITE_PICKAXE, Items.NETHERITE_AXE,
-            Items.NETHERITE_SHOVEL, Items.NETHERITE_HOE, Items.MUSIC_DISC_PIGSTEP, Items.DISC_FRAGMENT_5,
-            Items.GILDED_BLACKSTONE, Items.SEA_LANTERN, Items.SPONGE, Items.WET_SPONGE, Items.ANCIENT_DEBRIS,
-            Items.CONDUIT, Items.ENCHANTING_TABLE, Items.SHULKER_BOX, Items.NETHERITE_BLOCK,
-            Items.CHEST, Items.TRAPPED_CHEST, Items.BARREL, Items.ENDER_CHEST, Items.HOPPER,
-            Items.FURNACE, Items.BLAST_FURNACE, Items.SMOKER, Items.BREWING_STAND, Items.ANVIL`*  
+- `items` — *default `dragon_egg, dragon_head, wither_skeleton_skull, player_head, skeleton_skull, zombie_head, creeper_head, piglin_head, elytra, nether_star, heart_of_the_sea, beacon, conduit, enchanted_golden_apple, trident, netherite_ingot, netherite_scrap, netherite_block, netherite_helmet, netherite_chestplate, netherite_leggings, netherite_boots, netherite_sword, netherite_pickaxe, netherite_axe, netherite_shovel, netherite_hoe, music_disc_pigstep, disc_fragment_5, gilded_blackstone, sea_lantern, sponge, wet_sponge, ancient_debris, enchanting_table, shulker_box, chest, trapped_chest, barrel, ender_chest, hopper, furnace, blast_furnace, smoker, brewing_stand, anvil`*  
   Everything worth flagging — one list for the lot. Anything here is reported whether it is lying on the ground, hanging in an item frame, or placed as a block in the world. Ores are not here on purpose: ore-spotter++ handles those.
 
 **Alerts**
@@ -1146,11 +1123,11 @@ Highlights valuable items on the ground or in item frames, and can beam them so 
 
 - `beacon` — *default `false`*  
   Shoot a beam up from each rare item. Two within five blocks share one beam placed between them, so a pile doesn't become a wall of beams.
-- `beacon-color` — *default `new SettingColor(255, 215, 0, 180`, hidden until enabled*  
+- `beacon-color` — *default `rgba(255, 215, 0, 180)`, hidden until enabled*  
   Colour of those beams.
-- `item-color` — *default `new SettingColor(0, 255, 170, 255`, hidden until enabled*  
+- `item-color` — *default `rgba(0, 255, 170, 255)`, hidden until enabled*  
   Colour used for items on the ground.
-- `frame-color` — *default `new SettingColor(200, 90, 255, 255`, hidden until enabled*  
+- `frame-color` — *default `rgba(200, 90, 255, 255)`, hidden until enabled*  
   Colour used for items in frames.
 - `shape-mode` — *default `ShapeMode.Both`*  
   Outline only, filled sides only, or both.
@@ -1190,11 +1167,11 @@ Shows the server's region grid - every region numbered and shaded by which datac
 
 - `transparency` — *default `210`*  
   How solid the region squares are.
-- `background` — *default `new SettingColor(0, 0, 0, 150`*  
+- `background` — *default `rgba(0, 0, 0, 150)`*  
   Colour behind the map.
-- `player-color` — *default `new SettingColor(255, 255, 255, 255`, hidden until enabled*  
+- `player-color` — *default `rgba(255, 255, 255, 255)`, hidden until enabled*  
   Colour of your marker.
-- `text-color` — *default `new SettingColor(255, 255, 255, 255`*  
+- `text-color` — *default `rgba(255, 255, 255, 255)`*  
   Colour of the numbers and labels.
 
 
@@ -1206,7 +1183,7 @@ Teleports around with /rtp hunting for rare loot, marks anything it finds with a
 
 - `rtp-command` — *default `"rtp"`*  
   The command to send, without the slash. Usually just rtp.
-- `extra-variants` — *default `List.of(`*  
+- `extra-variants` — *default `empty`*  
   Optional extra versions to mix in at random, e.g. "rtp east" and "rtp west". Leave empty to always send the plain command above.
 - `min-wait-seconds` — *default `20`*  
   Shortest gap between attempts. The real gap is picked at random between this and the maximum, so the timing never looks mechanical.
@@ -1217,15 +1194,7 @@ Teleports around with /rtp hunting for rare loot, marks anything it finds with a
 
 **What To Look For**
 
-- `rare-items` — *default `List.of(
-            Items.ELYTRA, Items.SKELETON_SKULL, Items.ZOMBIE_HEAD, Items.CREEPER_HEAD, Items.PLAYER_HEAD, Items.PIGLIN_HEAD, Items.NETHERITE_INGOT, Items.NETHERITE_BLOCK, Items.NETHERITE_SCRAP,
-            Items.NETHERITE_HELMET, Items.NETHERITE_CHESTPLATE, Items.NETHERITE_LEGGINGS, Items.NETHERITE_BOOTS,
-            Items.NETHERITE_SWORD, Items.NETHERITE_PICKAXE, Items.NETHERITE_AXE,
-            Items.NETHERITE_SHOVEL, Items.NETHERITE_HOE,
-            Items.ANCIENT_DEBRIS, Items.DRAGON_EGG, Items.DRAGON_HEAD, Items.BEACON,
-            Items.NETHER_STAR, Items.ENCHANTED_GOLDEN_APPLE, Items.TRIDENT, Items.HEART_OF_THE_SEA,
-            Items.WITHER_SKELETON_SKULL, Items.SHULKER_BOX, Items.TOTEM_OF_UNDYING,
-            Items.MUSIC_DISC_PIGSTEP, Items.SPONGE, Items.WET_SPONGE`*  
+- `rare-items` — *default `elytra, skeleton_skull, zombie_head, creeper_head, player_head, piglin_head, netherite_ingot, netherite_block, netherite_scrap, netherite_helmet, netherite_chestplate, netherite_leggings, netherite_boots, netherite_sword, netherite_pickaxe, netherite_axe, netherite_shovel, netherite_hoe, ancient_debris, dragon_egg, dragon_head, beacon, nether_star, enchanted_golden_apple, trident, heart_of_the_sea, wither_skeleton_skull, shulker_box, totem_of_undying, music_disc_pigstep, sponge, wet_sponge`*  
   The loot worth stopping for. Anything here counts as a find whether it's lying on the ground, hanging in an item frame, or sitting in a nearby container.
 - `check-dropped` — *default `true`*  
   Count rare items lying on the ground.
@@ -1274,7 +1243,7 @@ Teleports around with /rtp hunting for rare loot, marks anything it finds with a
   Log what happened in chat: each teleport, each wait, and the find itself.
 - `beacon` — *default `true`*  
   Shoot a beam up from the find so you can walk back to it.
-- `beacon-color` — *default `new SettingColor(255, 215, 0, 200`, hidden until enabled*  
+- `beacon-color` — *default `rgba(255, 215, 0, 200)`, hidden until enabled*  
   Colour of that beam.
 
 
@@ -1312,11 +1281,11 @@ Remembers which ground you have already swept and points you at the ground you h
   Distance from the top of the screen.
 - `stats` — *default `true`, hidden until enabled*  
   Write how much ground you have covered under the map.
-- `covered-color` — *default `new SettingColor(60, 200, 120, 150`, hidden until enabled*  
+- `covered-color` — *default `rgba(60, 200, 120, 150)`, hidden until enabled*  
   Colour for ground you have already been over.
-- `gap-color` — *default `new SettingColor(40, 40, 40, 120`, hidden until enabled*  
+- `gap-color` — *default `rgba(40, 40, 40, 120)`, hidden until enabled*  
   Colour for ground you have not.
-- `player-color` — *default `new SettingColor(255, 255, 255, 255`, hidden until enabled*  
+- `player-color` — *default `rgba(255, 255, 255, 255)`, hidden until enabled*  
   Colour of your marker on the map.
 
 **In World**
@@ -1325,7 +1294,7 @@ Remembers which ground you have already swept and points you at the ground you h
   Outline the edge where searched ground meets unsearched ground, so you can fly along it and sweep cleanly instead of zig-zagging.
 - `frontier-y` — *default `120`, hidden until enabled*  
   Height to draw that edge at.
-- `frontier-color` — *default `new SettingColor(255, 200, 40, 140`, hidden until enabled*  
+- `frontier-color` — *default `rgba(255, 200, 40, 140)`, hidden until enabled*  
   Colour of the edge.
 
 
@@ -1348,7 +1317,7 @@ Hunts for the redstone and wiring signatures that give away hidden bases and far
   The Y height to draw the box/marker at.
 - `render-distance` — *default `512`*  
   How far away (in blocks) things are still drawn.
-- `line-color` — *default `new SettingColor(255, 0, 0, 230`*  
+- `line-color` — *default `rgba(255, 0, 0, 230)`*  
   Colour of the box outline.
 
 **Connected Scan**
@@ -1367,7 +1336,7 @@ Hunts for the redstone and wiring signatures that give away hidden bases and far
   Count redstone components (wire/repeaters/pistons…).
 - `conn-hoppers` — *default `true`, hidden until enabled*  
   Count hoppers.
-- `connected-scan-color` — *default `new SettingColor(0, 200, 255, 200`, hidden until enabled*  
+- `connected-scan-color` — *default `rgba(0, 200, 255, 200)`, hidden until enabled*  
   Colour for connected-scan chunks.
 
 
@@ -1381,7 +1350,7 @@ Boxes chunks with unusually dense live hostile-mob counts.
   Minimum hostile mobs in a chunk at once to flag it.
 - `rescan-ticks` — *default `40`*  
   Ticks between full rescans.
-- `color` — *default `new SettingColor(255, 0, 0, 90`*  
+- `color` — *default `rgba(255, 0, 0, 90)`*  
   Highlight colour.
 
 
@@ -1418,11 +1387,11 @@ Highlights mob and trial spawners through terrain, at any height.
   Draw a line from you to each highlighted thing.
 - `shape-mode` — *default `ShapeMode.Both`*  
   How boxes are drawn: outline only, filled sides only, or both.
-- `fill-color` — *default `new SettingColor(255, 130, 0, 45`*  
+- `fill-color` — *default `rgba(255, 130, 0, 45)`*  
   Colour of the filled part of the box.
-- `line-color` — *default `new SettingColor(255, 130, 0, 255`*  
+- `line-color` — *default `rgba(255, 130, 0, 255)`*  
   Colour of the box outline.
-- `tracer-color` — *default `new SettingColor(255, 130, 0, 160`, hidden until enabled*  
+- `tracer-color` — *default `rgba(255, 130, 0, 160)`, hidden until enabled*  
   Colour of the tracer lines.
 
 
@@ -1436,15 +1405,15 @@ Alerts (popup/chat/sound) when likely staff go online or offline.
   Flag tab-list players in spectator mode (common for staff watching you).
 - `creative` — *default `true`*  
   Flag tab-list players in creative mode.
-- `staff-usernames` — *default `List.of("0Gsummer", "Bigboss_jeff123", "Bronuts", "Dough4", "DrDonutt", "Fallerfly", "FluffyMaster07", "Frwost", "ItszDaBaby", "Itszdeath", "LzouZMp5", "Munkerlich", "NoahvdAa", "Pastagamer08", "Rokezy", "RyuuI_", "W1zoX_", "_chaon", "archivePedro", "bautiedgar", "showered"`*  
+- `staff-usernames` — *default `"0Gsummer", "Bigboss_jeff123", "Bronuts", "Dough4", "DrDonutt", "Fallerfly", "FluffyMaster07", "Frwost", "ItszDaBaby", "Itszdeath", "LzouZMp5", "Munkerlich", "NoahvdAa", "Pastagamer08", "Rokezy", "RyuuI_", "W1zoX_", "_chaon", "archivePedro", "bautiedgar", "showered"`*  
   Exact staff usernames — anyone here is always alerted on when they're online (case-insensitive). Pre-filled with known DonutSMP staff; add or remove freely.
 - `detect-roles` — *default `true`*  
   Flag anyone whose tab-list name shows a staff tag like (Admin)/(Mod)/[Staff]/(Dev).
 - `detect-prefixes` — *default `true`*  
   Turn prefix/name detection on or off. Uses the blacklist and whitelist below.
-- `prefix-blacklist` — *default `List.of("dev", "admin", "mod", "owner", "staff", "helper", "\u2605", "\u2606", "\u272A", "\u2B50"`, hidden until enabled*  
+- `prefix-blacklist` — *default `"dev", "admin", "mod", "owner", "staff", "helper", "\u2605", "\u2606", "\u272A", "\u2B50"`, hidden until enabled*  
   If a player's name contains any of these words/prefixes, flag them (e.g. dev, admin, mod, staff). Also includes the star symbols servers commonly put on staff ranks.
-- `prefix-whitelist` — *default `List.of("+", "media", "yt", "twitch", "\uD83D\uDCF7", "\uD83C\uDFA5", "\u25B6"`, hidden until enabled*  
+- `prefix-whitelist` — *default `"+", "media", "yt", "twitch", "\uD83D\uDCF7", "\uD83C\uDFA5", "\u25B6"`, hidden until enabled*  
   If a player's name contains any of these, never flag them by name/prefix (e.g. +, media, yt, or the camera icon servers give content creators). Overrides the blacklist and unusual-name check.
 - `flag-odd-names` — *default `false`, hidden until enabled*  
   On top of the blacklist, also flag any name with a space or a character a normal Minecraft name can't have (coloured/bracketed staff names). Still respects the whitelist.
@@ -1470,7 +1439,7 @@ Alerts (popup/chat/sound) when likely staff go online or offline.
   Panel position from the left of the screen.
 - `panel-y` — *default `80`, hidden until enabled*  
   Panel position from the top of the screen.
-- `panel-text-color` — *default `new SettingColor(255, 80, 80, 255`, hidden until enabled*  
+- `panel-text-color` — *default `rgba(255, 80, 80, 255)`, hidden until enabled*  
   Colour of the names in the panel.
 
 
@@ -1493,7 +1462,7 @@ Works out where the stronghold is from two ender eye throws and marks the spot.
   Draw a marker at the estimated stronghold.
 - `marker-y` — *default `64`, hidden until enabled*  
   Height to draw the marker at.
-- `color` — *default `new SettingColor(0, 255, 200, 220`, hidden until enabled*  
+- `color` — *default `rgba(0, 255, 200, 220)`, hidden until enabled*  
   Colour of the marker.
 - `tracer` — *default `true`, hidden until enabled*  
   Draw a line from you to the estimate.
@@ -1588,7 +1557,7 @@ Finds chunks where plants and blocks have overgrown far past natural amounts —
   A chunk arriving within this many milliseconds of the one before counts as instant.
 - `instant-run` — *default `20`, hidden until enabled*  
   How many instant arrivals in a row before the chunk is flagged.
-- `trace-color` — *default `new SettingColor(90, 0, 160, 90`, hidden until enabled*  
+- `trace-color` — *default `rgba(90, 0, 160, 90)`, hidden until enabled*  
   Colour used for chunks flagged this way.
 
 **Indirect (packet-based)**
@@ -1629,9 +1598,9 @@ Finds chunks where plants and blocks have overgrown far past natural amounts —
   Draw a vertical beam on chunks flagged this way, so you can spot them from a distance.
 - `indirect-floor` — *default `false`, hidden until enabled*  
   Shade the whole chunk footprint on chunks flagged this way.
-- `indirect-beam-color` — *default `new SettingColor(255, 130, 0, 180`, hidden until enabled*  
+- `indirect-beam-color` — *default `rgba(255, 130, 0, 180)`, hidden until enabled*  
   Colour of the beam.
-- `indirect-floor-color` — *default `new SettingColor(255, 130, 0, 45`, hidden until enabled*  
+- `indirect-floor-color` — *default `rgba(255, 130, 0, 45)`, hidden until enabled*  
   Colour of the chunk shading.
 - `flag-score` — *default `10`, hidden until enabled*  
   Score a chunk needs before it's flagged this way.
@@ -1661,17 +1630,17 @@ Finds chunks where plants and blocks have overgrown far past natural amounts —
   Height to draw the chunk box at. Defaults to sea level so boxes sit where you can actually see them.
 - `shape-mode` — *default `ShapeMode.Both`*  
   How the boxes are drawn: outline only, filled sides only, or both.
-- `fill-color` — *default `new SettingColor(255, 200, 0, 40`*  
+- `fill-color` — *default `rgba(255, 200, 0, 40)`*  
   The colour of the filled/shaded part of the box.
 - `tracers` — *default `false`*  
   Draw a line from you to each flagged chunk.
-- `amethyst-color` — *default `new SettingColor(190, 120, 255, 90`*  
+- `amethyst-color` — *default `rgba(190, 120, 255, 90)`*  
   Colour used for chunks flagged because of amethyst, so a geode being farmed stands out from the other finds.
-- `extreme-color` — *default `new SettingColor(255, 40, 40, 200`, hidden until enabled*  
+- `extreme-color` — *default `rgba(255, 40, 40, 200)`, hidden until enabled*  
   Colour for chunks with extreme overgrowth.
-- `locked-color` — *default `new SettingColor(255, 0, 255, 200`, hidden until enabled*  
+- `locked-color` — *default `rgba(255, 0, 255, 200)`, hidden until enabled*  
   Colour for chunks locked as confirmed bases.
-- `line-color` — *default `new SettingColor(255, 200, 0, 220`*  
+- `line-color` — *default `rgba(255, 200, 0, 220)`*  
   The colour of the box outline.
 
 
@@ -1698,7 +1667,7 @@ Finds long straight tunnels players have dug, including ones far underground you
 
 - `render-distance` — *default `256`*  
   How far away (in blocks) things are still drawn.
-- `line-color` — *default `new SettingColor(0, 200, 255, 220`*  
+- `line-color` — *default `rgba(0, 200, 255, 220)`*  
   Colour of the box outline.
 
 
@@ -1714,9 +1683,9 @@ Highlights the chunk of a deep voice-chat transmitter (passive, no audio).
   Only highlight chunks of voices below this Y.
 - `forget-seconds` — *default `15`*  
   Seconds before a silent source is forgotten.
-- `fill-color` — *default `new SettingColor(0, 200, 255, 45`*  
+- `fill-color` — *default `rgba(0, 200, 255, 45)`*  
   Colour of the filled part of the box.
-- `line-color` — *default `new SettingColor(0, 200, 255, 220`*  
+- `line-color` — *default `rgba(0, 200, 255, 220)`*  
   Colour of the box outline.
 
 
@@ -1868,7 +1837,7 @@ Places and blows end crystals for you. Also carries the helpers: crystals you hi
   Range to client-side remove crystals within (blocks).
 - `show-placement` — *default `false`*  
   Highlight the single best obsidian/bedrock base to place a crystal on against the nearest target.
-- `placement-color` — *default `new SettingColor(0, 255, 120, 200`, hidden until enabled*  
+- `placement-color` — *default `rgba(0, 255, 120, 200)`, hidden until enabled*  
   Colour of the best-placement highlight.
 
 **Bypass**
@@ -1895,7 +1864,7 @@ Makes crystals you hit vanish on your client straight away so you can chain into
   How far away a player can be and still be targeted (blocks).
 - `max-self-damage` — *default `8`, hidden until enabled*  
   Never suggest a placement that would deal more than this much damage to you.
-- `color` — *default `new SettingColor(0, 255, 0, 90`, hidden until enabled*  
+- `color` — *default `rgba(0, 255, 0, 90)`, hidden until enabled*  
   Colour of the best-placement highlight.
 
 
@@ -2176,7 +2145,7 @@ GUI-move / entity-control / slippy / reverse-step in one module.
 
 Lets you move freely through blocks. Works where the server doesn't correct your position (own worlds and lenient servers).
 
-**Modes** — Flying
+**Modes** — Flying, Motion
 
 *No settings.*
 
@@ -2212,7 +2181,7 @@ When you hold two opposite movement keys at once, the most recently pressed one 
 
 Move faster than normal. How much you can get away with depends on the server's anti-cheat.
 
-**Modes** — Simple
+**Modes** — Simple, Bhop, Strafe, Sprint, YPort, OnGround, Hop
 
 *No settings.*
 
@@ -2441,9 +2410,9 @@ Forces chunks to reload so terrain the server sent but your client never drew sh
   Draw the individual chunk squares instead of one solid block of shading.
 - `mark-centre` — *default `true`, hidden until enabled*  
   Mark the chunk the coverage is measured from.
-- `area-color` — *default `new meteordevelopment.meteorclient.utils.render.color.SettingColor(0, 200, 255, 35`, hidden until enabled*  
+- `area-color` — *default `new meteordevelopment.meteorclient.utils.render.color.SettingColor(0, 200, 255, 35)`, hidden until enabled*  
   Colour of the shaded area.
-- `centre-color` — *default `new meteordevelopment.meteorclient.utils.render.color.SettingColor(255, 255, 0, 220`, hidden until enabled*  
+- `centre-color` — *default `new meteordevelopment.meteorclient.utils.render.color.SettingColor(255, 255, 0, 220)`, hidden until enabled*  
   Colour of the centre marker.
 
 
@@ -2537,9 +2506,9 @@ Builds a litematica schematic through the ordinary placement path — real rotat
   Draw what is still to be built.
 - `preview-range` — *default `48`, hidden until enabled*  
   How far the preview reaches, in blocks.
-- `todo-color` — *default `new SettingColor(90, 190, 255, 60`, hidden until enabled*  
+- `todo-color` — *default `rgba(90, 190, 255, 60)`, hidden until enabled*  
   Colour for blocks still to place.
-- `stuck-color` — *default `new SettingColor(255, 70, 70, 110`, hidden until enabled*  
+- `stuck-color` — *default `rgba(255, 70, 70, 110)`, hidden until enabled*  
   Colour for the ones it gave up on, so you can see what needs a hand.
 
 
@@ -2720,15 +2689,15 @@ Client-side fakes for screenshots — a pay receipt that never sends, and a side
   Draw a sidebar of your own with whatever numbers you like. It is painted by this addon, so the server has no idea it is there.
 - `title` — *default `"Stats"`, hidden until enabled*  
   Heading at the top of the sidebar.
-- `lines` — *default `List.of("Balance: $1,204,000", "Kills: 1337", "Deaths: 0", "Playtime: 412h"`, hidden until enabled*  
+- `lines` — *default `"Balance: $1,204,000", "Kills: 1337", "Deaths: 0", "Playtime: 412h"`, hidden until enabled*  
   Each entry is one row. Write them however you like, e.g. "Balance: $1,204,000".
 - `x` — *default `1400`, hidden until enabled*  
   Distance from the left of the screen.
 - `y` — *default `120`, hidden until enabled*  
   Distance from the top of the screen.
-- `background` — *default `new SettingColor(0, 0, 0, 140`, hidden until enabled*  
+- `background` — *default `rgba(0, 0, 0, 140)`, hidden until enabled*  
   Colour behind the sidebar.
-- `text-color` — *default `new SettingColor(255, 255, 255, 255`, hidden until enabled*  
+- `text-color` — *default `rgba(255, 255, 255, 255)`, hidden until enabled*  
   Colour of the rows.
 
 
@@ -2762,17 +2731,17 @@ Highlights dropped items on the ground.
 
 - `color-by-rarity` — *default `true`*  
   Colour each item by how rare it is instead of using one flat colour: white common, yellow uncommon, pink rare, purple epic. Enchanted items get the rare colour too.
-- `line-color` — *default `new SettingColor(255, 255, 0, 220`, hidden until enabled*  
+- `line-color` — *default `rgba(255, 255, 0, 220)`, hidden until enabled*  
   Colour of the box outline when rarity colouring is off.
-- `fill-color` — *default `new SettingColor(255, 255, 0, 40`, hidden until enabled*  
+- `fill-color` — *default `rgba(255, 255, 0, 40)`, hidden until enabled*  
   Colour of the box sides when rarity colouring is off.
-- `common-color` — *default `new SettingColor(220, 220, 220, 220`, hidden until enabled*  
+- `common-color` — *default `rgba(220, 220, 220, 220)`, hidden until enabled*  
   Colour for ordinary items.
-- `uncommon-color` — *default `new SettingColor(255, 255, 85, 220`, hidden until enabled*  
+- `uncommon-color` — *default `rgba(255, 255, 85, 220)`, hidden until enabled*  
   Colour for uncommon items.
-- `rare-color` — *default `new SettingColor(255, 105, 180, 220`, hidden until enabled*  
+- `rare-color` — *default `rgba(255, 105, 180, 220)`, hidden until enabled*  
   Colour for rare and enchanted items.
-- `epic-color` — *default `new SettingColor(180, 80, 255, 220`, hidden until enabled*  
+- `epic-color` — *default `rgba(180, 80, 255, 220)`, hidden until enabled*  
   Colour for epic items.
 - `fill-alpha` — *default `40`, hidden until enabled*  
   How solid the filled sides are when colouring by rarity.
@@ -2931,7 +2900,7 @@ A fading trail behind you.
 
 - `length` — *default `80`*  
   How many points to keep.
-- `color` — *default `new SettingColor(120, 200, 255, 200`*  
+- `color` — *default `rgba(120, 200, 255, 200)`*  
   Highlight colour.
 - `fade` — *default `true`*  
   Fade the tail out.
