@@ -96,7 +96,7 @@ what the server already sent you.
 - **ore-spotter++** — X-ray that highlights ores through terrain, kept smooth so it doesn't stutter as you move.
 - **particle-esp++** — Highlights particles spawning underground while you're above ground (someone is down there).
 - **player-detector++** — Popup / sound / chat when another player renders near you.
-- **rare-finder++** — Highlights valuable items on the ground or in item frames, and can beam them so you spot them from far off.
+- **rare-finder++** — Highlights genuinely rare things — on the ground, in item frames, or placed as blocks — and can beam them so you spot them from far off.
 - **region-map++** — Shows the server's region grid - every region numbered and shaded by which datacentre it runs on, with a marker for the one you're in.
 - **rtp-finder++** — Teleports around with /rtp hunting for rare loot, marks anything it finds with a beacon, and stops itself once it does.
 - **search-map++** — Remembers which ground you have already swept and points you at the ground you have not, so you stop covering the same area twice.

@@ -134,6 +134,29 @@ public class SearchMap extends Module {
         covered.put(event.chunk().getPos().toLong(), System.currentTimeMillis());
     }
 
+    private long[] frontier = new long[0];
+    private long frontierAt;
+
+    private long[] computeFrontier() {
+        if (mc.player == null) return new long[0];
+        int pcx = mc.player.getChunkPos().x, pcz = mc.player.getChunkPos().z;
+        int r = Math.min(mapRadius.get(), 32);
+        java.util.List<Long> out = new java.util.ArrayList<>();
+        for (int gz = -r; gz <= r; gz++) {
+            for (int gx = -r; gx <= r; gx++) {
+                int cx = pcx + gx, cz = pcz + gz;
+                if (!isCovered(cx, cz)) continue;
+                // covered, but touching something that is not: that is the edge
+                boolean edge = !isCovered(cx + 1, cz) || !isCovered(cx - 1, cz)
+                            || !isCovered(cx, cz + 1) || !isCovered(cx, cz - 1);
+                if (edge) out.add(ChunkPos.toLong(cx, cz));
+            }
+        }
+        long[] arr = new long[out.size()];
+        for (int i = 0; i < arr.length; i++) arr[i] = out.get(i);
+        return arr;
+    }
+
     private boolean isCovered(int cx, int cz) {
         Long when = covered.get(ChunkPos.toLong(cx, cz));
         if (when == null) return false;
@@ -226,25 +249,18 @@ public class SearchMap extends Module {
     private void onRender(Render3DEvent event) {
         if (mc.player == null) return;
 
-        // the edge between searched and unsearched — fly along it to sweep cleanly
+        // the edge between searched and unsearched — fly along it to sweep cleanly. Worked out a few
+        // times a second rather than every frame: it only changes as chunks are covered.
         if (showFrontier.get()) {
-            int pcx = mc.player.getChunkPos().x, pcz = mc.player.getChunkPos().z;
-            int r = Math.min(mapRadius.get(), 32);
+            long now = System.currentTimeMillis();
+            if (now - frontierAt > 250) { frontier = computeFrontier(); frontierAt = now; }
             SettingColor fc = frontierColor.get();
             Color fill = new Color(fc.r, fc.g, fc.b, fc.a);
             Color line = new Color(fc.r, fc.g, fc.b, Math.min(255, fc.a + 100));
             double y = frontierY.get();
-            for (int gz = -r; gz <= r; gz++) {
-                for (int gx = -r; gx <= r; gx++) {
-                    int cx = pcx + gx, cz = pcz + gz;
-                    if (!isCovered(cx, cz)) continue;
-                    // covered, but touching something that is not: that is the edge
-                    boolean edge = !isCovered(cx + 1, cz) || !isCovered(cx - 1, cz)
-                                || !isCovered(cx, cz + 1) || !isCovered(cx, cz - 1);
-                    if (!edge) continue;
-                    double x0 = cx * 16.0, z0 = cz * 16.0;
-                    event.renderer.box(x0, y, z0, x0 + 16, y + 0.2, z0 + 16, fill, line, ShapeMode.Both, 0);
-                }
+            for (long k : frontier) {
+                double x0 = ChunkPos.getPackedX(k) * 16.0, z0 = ChunkPos.getPackedZ(k) * 16.0;
+                event.renderer.box(x0, y, z0, x0 + 16, y + 0.2, z0 + 16, fill, line, ShapeMode.Both, 0);
             }
         }
 

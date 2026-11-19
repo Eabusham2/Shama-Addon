@@ -332,11 +332,20 @@ public class RtpFinder extends Module {
                     BlockPos me = mc.player.getBlockPos();
                     int bot = Math.max(wc.getBottomY(), me.getY() - (int) r), top2 = Math.min(wc.getTopYInclusive(), me.getY() + (int) r);
                     BlockPos.Mutable m2 = new BlockPos.Mutable();
-                    for (int x = 0; x < 16; x++) for (int z = 0; z < 16; z++) for (int y = bot; y <= top2; y++) {
-                        var st = wc.getBlockState(m2.set(bx2 + x, y, bz2 + z));
-                        if (st.isAir()) continue;
-                        var it = st.getBlock().asItem();
-                        if (it != Items.AIR && wanted.contains(it)) return it.getName().getString() + " placed";
+                    // a section whose palette holds none of the wanted blocks is skipped unread
+                    net.minecraft.world.chunk.ChunkSection[] secs = wc.getSectionArray();
+                    for (int si = 0; si < secs.length; si++) {
+                        var sec = secs[si];
+                        int sy = wc.sectionIndexToCoord(si) << 4;
+                        if (sec == null || sec.isEmpty() || sy + 15 < bot || sy > top2) continue;
+                        if (!sec.hasAny(st -> !st.isAir() && wanted.contains(st.getBlock().asItem()))) continue;
+                        for (int x = 0; x < 16; x++) for (int z = 0; z < 16; z++)
+                            for (int y = Math.max(bot, sy); y <= Math.min(top2, sy + 15); y++) {
+                                var st = wc.getBlockState(m2.set(bx2 + x, y, bz2 + z));
+                                if (st.isAir()) continue;
+                                var it = st.getBlock().asItem();
+                                if (it != Items.AIR && wanted.contains(it)) return it.getName().getString() + " placed";
+                            }
                     }
                 }
             }

@@ -454,22 +454,40 @@ public class DeepActivity extends Module {
         if (!amethystHighlight.get() || mc.world == null || mc.player == null) { amethyst.clear(); return; }
         if (amethystTick++ % Math.max(1, amethystScanTicks.get()) != 0) return;
 
-        amethyst.clear();
         int r = amethystRange.get();
         BlockPos me = mc.player.getBlockPos();
-        BlockPos.Mutable m = new BlockPos.Mutable();
-        for (int dx = -r; dx <= r; dx++) for (int dz = -r; dz <= r; dz++) for (int dy = -r; dy <= r; dy++) {
-            int x = me.getX() + dx, y = me.getY() + dy, z = me.getZ() + dz;
-            var st = mc.world.getBlockState(m.set(x, y, z));
-            if (st.isAir()) continue;
-            // matched with the supplied AmethystESP check so every module agrees what counts
-            if (!shama.addon.util.AmethystScan.isAmethystLike(st)) continue;
-            int stage = amethystStage(shama.addon.util.BlockPaths.of(st.getBlock()));
-            if (stage < 0) continue;
-            if (stage == 0 && !amethystBudding.get()) continue;
-            if (stage == 5 && !amethystBlocks.get()) continue;
-            amethyst.add(new int[]{x, y, z, stage});
+        java.util.List<int[]> next = new java.util.ArrayList<>();
+        // Walk the cube a chunk section at a time and skip every section whose palette holds no
+        // amethyst. Reading the whole cube block by block was close to a million reads each pass.
+        int minCx = (me.getX() - r) >> 4, maxCx = (me.getX() + r) >> 4;
+        int minCz = (me.getZ() - r) >> 4, maxCz = (me.getZ() + r) >> 4;
+        int minY = me.getY() - r, maxY = me.getY() + r;
+        for (int cx = minCx; cx <= maxCx; cx++) for (int cz = minCz; cz <= maxCz; cz++) {
+            var ch = mc.world.getChunk(cx, cz, net.minecraft.world.chunk.ChunkStatus.FULL, false);
+            if (!(ch instanceof net.minecraft.world.chunk.WorldChunk wc)) continue;
+            var secs = wc.getSectionArray();
+            for (int si = 0; si < secs.length; si++) {
+                var sec = secs[si];
+                int sy = wc.sectionIndexToCoord(si) << 4;
+                if (sec == null || sec.isEmpty() || sy + 15 < minY || sy > maxY) continue;
+                if (!sec.hasAny(shama.addon.util.AmethystScan::isAmethystLike)) continue;
+                for (int ly = 0; ly < 16; ly++) for (int lx = 0; lx < 16; lx++) for (int lz = 0; lz < 16; lz++) {
+                    int x = (cx << 4) + lx, y = sy + ly, z = (cz << 4) + lz;
+                    if (Math.abs(x - me.getX()) > r || Math.abs(y - me.getY()) > r || Math.abs(z - me.getZ()) > r) continue;
+                    var st = sec.getBlockState(lx, ly, lz);
+                    if (st.isAir()) continue;
+                    // matched with the supplied AmethystESP check so every module agrees what counts
+                    if (!shama.addon.util.AmethystScan.isAmethystLike(st)) continue;
+                    int stage = amethystStage(shama.addon.util.BlockPaths.of(st.getBlock()));
+                    if (stage < 0) continue;
+                    if (stage == 0 && !amethystBudding.get()) continue;
+                    if (stage == 5 && !amethystBlocks.get()) continue;
+                    next.add(new int[]{x, y, z, stage});
+                }
+            }
         }
+        amethyst.clear();
+        amethyst.addAll(next);
     }
 
     @EventHandler

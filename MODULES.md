@@ -38,15 +38,13 @@ Tells a chunk somebody is holding open from one nobody has touched, by reading t
 - `ignore-my-range` — *default `12`*  
   Ignore chunks this close to you, in chunks. Your own presence is what keeps nearby ground loaded and ticking, so anything inside your render distance would flag on you rather than on anybody else. Set it to roughly your render distance.
 - `state-change` — *default `true`*  
-  Compare a chunk against how it looked last time and see whether the parts that only move while it is loaded have moved. The clock the game keeps of how long players have spent in a chunk is the main one: it advances while somebody is in range and sits perfectly still otherwise. So if it has gone up between two sightings, a player was there in between. Nothing else can move it, which makes this proof rather than a guess.
+  Remember each chunk exactly as it was when it left your view, and compare it with how it comes back. Crops, saplings, leaves, grass, vines and the like only change while a player is close enough for the ground to be ticked, so if those have moved while you were away, somebody was there. On servers that hide the ground below a height by filling it in when you are alone, the same comparison catches the moment real ground starts being sent instead — which only happens because someone else is down there.
 - `min-gap` — *default `60`, hidden until enabled*  
   How long you must have been away before a comparison counts, in seconds. Too short and you catch normal ticking from your own presence.
 - `min-change` — *default `3`, hidden until enabled*  
-  How many seconds the inhabited clock has to gain before it counts. One or two can come from you passing through yourself; more than that means somebody else.
-- `total-time-here` — *default `true`*  
-  Flag chunks the game says players have spent a long time in. It is recorded per chunk and survives after they leave, so it points at where somebody actually lives rather than where they walked.
-- `minutes-spent` — *default `120`, hidden until enabled*  
-  How many minutes of recorded presence a chunk needs.
+  How many growing blocks have to have changed before it counts. A plant at the very edge can still be ticked for a moment after you leave; a handful more than that means somebody else.
+- `hidden-below-y` — *default `0`, hidden until enabled*  
+  The height below which a server may be hiding the ground by filling it in solid. A section below this that comes back solid with one or two kinds of block is treated as filled in; one that comes back with real caves and ores is real. A chunk switching from one to the other is the tell.
 - `changes-unattended` — *default `true`*  
   Flag chunks whose blocks change while no player is visible to you. Something is running there — a farm ticking, or somebody out of render distance.
 - `min-changes` — *default `20`, hidden until enabled*  
@@ -712,8 +710,8 @@ Marks amethyst so you can tell a farmed geode from an untouched one — colour e
   Lowest height to scan for amethyst.
 - `scan-max-y` — *default `30`*  
   Highest height to scan for amethyst.
-- `min-amethyst` — *default `12`*  
-  How much amethyst a chunk needs before it counts as a geode at all.
+- `amethyst-needed` — *default `1`*  
+  How much amethyst a chunk needs before any of it is marked. At 1 a single crystal, bud or block is marked on its own — a lone cluster left behind is often the only sign a geode was there. Raise it to only see bigger finds.
 - `only-suspicious` — *default `true`*  
   Only box geodes that look farmed rather than every one you pass. A natural geode is thick with grown clusters; a harvested one is mostly bare budding blocks, because the grown ones keep getting taken.
 - `max-grown-percent` — *default `25`, hidden until enabled*  
@@ -988,7 +986,39 @@ Predicts where ores are from the world seed, accurate to vanilla generation. Ent
 
 X-ray that highlights ores through terrain, kept smooth so it doesn't stutter as you move.
 
-*No settings.*
+**General**
+
+- `chunk-range` — *default `4`*  
+  Chunks around you to keep ore results for. Scanning happens once per chunk as it loads; this only controls how far results are kept/rendered.
+
+**Render**
+
+- `color-by-ore` — *default `true`*  
+  Color-code each box by ore type. Off = use the single fill/line colors below.
+- `shape-mode` — *default `ShapeMode.Lines`*  
+  Draw outlines, filled sides, or both.
+- `fill-opacity` — *default `40`, hidden until enabled*  
+  Fill opacity used when color-by-ore is on.
+- `fill-color` — *default `rgba(255, 255, 255, 40)`, hidden until enabled*  
+  Box fill color (used when color-by-ore is off).
+- `line-color` — *default `rgba(255, 255, 255, 200)`, hidden until enabled*  
+  Box outline color (used when color-by-ore is off).
+- `glow` — *default `0`*  
+  How strongly each ore glows through terrain. 0 is off; higher makes the halo brighter and easier to pick out at a distance.
+
+**Alerts**
+
+- `popup` — *default `true`*  
+  Put a title on screen when new ore turns up, naming what and how much. A vein arriving at once is one popup, not one per block.
+- `sound` — *default `true`*  
+  Play a chime when new ore turns up.
+- `volume` — *default `1.5`, hidden until enabled*  
+  How loud that chime is.
+- `chat` — *default `false`*  
+  Also note each batch of new ore in chat, with where it is.
+- `debris-nether-only` — *default `true`*  
+  When ancient debris is the only ore switched on, only run in the Nether. Debris does not generate anywhere else, so outside it there is nothing to find and no reason to spend time scanning.
+
 
 ### particle-esp++
 
@@ -1089,14 +1119,14 @@ Popup / sound / chat when another player renders near you.
 
 ### rare-finder++
 
-Highlights valuable items on the ground or in item frames, and can beam them so you spot them from far off.
+Highlights genuinely rare things — on the ground, in item frames, or placed as blocks — and can beam them so you spot them from far off.
 
 **General**
 
 - `find-dropped` — *default `true`*  
   Highlight rare items lying on the ground.
 - `find-placed` — *default `true`*  
-  Also find rare blocks that have been placed in the world — a beacon someone built, a sponge wall, heads on display, gilded blackstone. These never appear as dropped items, so without this they're invisible.
+  Also find rare blocks standing in the world — a beacon someone built, a sponge wall, heads on display, a monster spawner, a shulker box left in a hole. These never appear as dropped items, so without this they're invisible. Each loaded chunk is checked once as it arrives, so this costs nothing while you stand still.
 - `placed-range` — *default `64`, hidden until enabled*  
   How far out to look for placed rare blocks, in blocks.
 - `placed-color` — *default `rgba(255, 160, 0, 255)`, hidden until enabled*  
@@ -1104,18 +1134,18 @@ Highlights valuable items on the ground or in item frames, and can beam them so 
 - `find-framed` — *default `true`*  
   Highlight rare items displayed in item frames — people put their best gear on show.
 - `scan-ticks` — *default `20`*  
-  Ticks between sweeps for dropped and framed items.
-- `items` — *default `dragon_egg, dragon_head, wither_skeleton_skull, player_head, skeleton_skull, zombie_head, creeper_head, piglin_head, elytra, nether_star, heart_of_the_sea, beacon, conduit, enchanted_golden_apple, trident, netherite_ingot, netherite_scrap, netherite_block, netherite_helmet, netherite_chestplate, netherite_leggings, netherite_boots, netherite_sword, netherite_pickaxe, netherite_axe, netherite_shovel, netherite_hoe, music_disc_pigstep, disc_fragment_5, gilded_blackstone, sea_lantern, sponge, wet_sponge, ancient_debris, enchanting_table, shulker_box, chest, trapped_chest, barrel, ender_chest, hopper, furnace, blast_furnace, smoker, brewing_stand, anvil`*  
-  Everything worth flagging — one list for the lot. Anything here is reported whether it is lying on the ground, hanging in an item frame, or placed as a block in the world. Ores are not here on purpose: ore-spotter++ handles those.
+  Ticks between sweeps for dropped and framed items. Placed blocks do not use this; they are checked as their chunk arrives and whenever a block in it changes.
+- `rare-items` — *default `dragon_egg, dragon_head, elytra, nether_star, beacon, conduit, heart_of_the_sea, enchanted_golden_apple, trident, mace, heavy_core, wither_skeleton_skull, skeleton_skull, zombie_head, creeper_head, piglin_head, player_head, netherite_ingot, netherite_scrap, netherite_block, netherite_upgrade_smithing_template, netherite_helmet, netherite_chestplate, netherite_leggings, netherite_boots, netherite_sword, netherite_pickaxe, netherite_axe, netherite_shovel, netherite_hoe, music_disc_pigstep, disc_fragment_5, sponge, wet_sponge, spawner, shulker_box, white_shulker_box, orange_shulker_box, magenta_shulker_box, light_blue_shulker_box, yellow_shulker_box, lime_shulker_box, pink_shulker_box, gray_shulker_box, light_gray_shulker_box, cyan_shulker_box, purple_shulker_box, blue_shulker_box, brown_shulker_box, green_shulker_box, red_shulker_box, black_shulker_box`*  
+  Everything worth flagging — one list for the lot, and only things that are genuinely hard to come by. Anything here is reported whether it is lying on the ground, hanging in an item frame, or standing as a block in the world. Everyday blocks such as chests, furnaces and anvils are left out on purpose, since every base and village is full of them; ores are left to ore-spotter++.
 
 **Alerts**
 
 - `chat` — *default `true`*  
-  Log each new rare item in chat.
-- `popup` — *default `false`*  
-  Throw a title on screen when one turns up.
-- `sound` — *default `false`*  
-  Play a sound when one turns up.
+  Log each new find in chat with where it is — dropped, framed and placed alike.
+- `popup` — *default `true`*  
+  Throw a title on screen when something turns up, whether it is on the ground, in a frame or placed as a block. Several at once share one title.
+- `sound` — *default `true`*  
+  Play a sound when something turns up, for all three kinds of find.
 - `volume` — *default `2.0`, hidden until enabled*  
   How loud that sound is.
 
@@ -1552,7 +1582,7 @@ Finds chunks where plants and blocks have overgrown far past natural amounts —
 **Player Traces**
 
 - `active-chunk` — *default `false`*  
-  Flag chunks somebody else is holding open. A chunk read from disk takes real time to hand over; one already in memory for a player comes back almost instantly, so a run of instant arrivals means someone is keeping it live. Available on its own as active-chunk-detector++, which reads the chunk's inhabited clock as well and gives you far more detail.
+  Flag chunks somebody else is holding open. A chunk read from disk takes real time to hand over; one already in memory for a player comes back almost instantly, so a run of instant arrivals means someone is keeping it live. Available on its own as active-chunk-detector++, which also compares each chunk against how you left it and gives you far more detail. Your own pearls and teleports, and ground you only just left, are put down to you.
 - `instant-threshold` — *default `3`, hidden until enabled*  
   A chunk arriving within this many milliseconds of the one before counts as instant.
 - `instant-run` — *default `20`, hidden until enabled*  
@@ -1562,14 +1592,10 @@ Finds chunks where plants and blocks have overgrown far past natural amounts —
 
 **Indirect (packet-based)**
 
-- `long-loaded-chunks` — *default `false`*  
-  Flag chunks the server has kept loaded/inhabited for a long time (a base players stay near). Uses the chunk's inhabited-time counter.
 - `weighted-scoring` — *default `false`*  
   Their ChunkScanner weighted scoring, added on top: vine-length + amethyst-cluster-size + full beehives combined into one score.
 - `weighted-min-score` — *default `6`, hidden until enabled*  
   Combined scanner score to flag a chunk.
-- `inhabited-minutes` — *default `180`, hidden until enabled*  
-  Minimum inhabited minutes to flag a chunk (180 = three hours).
 - `min-column-height` — *default `25`, hidden until enabled*  
   A vine/cave-vine/bamboo/sugar-cane/kelp column grown at least this tall flags the chunk. Runs alongside the per-type counts.
 - `extreme-column-height` — *default `100`, hidden until enabled*  
@@ -1878,10 +1904,14 @@ Draw bows and crossbows much faster than normal.
 
 - `mode` — *default `Mode.Full`*  
   Release strategy. Full = server-safe full power; Instant = fastest release where the server allows it; Rapid = max fire rate; Desync = experimental server trick.
+- `bows` — *default `true`*  
+  Affect bows (including modded).
 - `crossbows` — *default `true`*  
   Affect crossbows.
 - `charge-time` — *default `0`, hidden until enabled*  
   Instant mode on a REMOTE server: ticks to draw before releasing (0 = weakest/instant, 20 = full vanilla). Ignored where you control the server.
+- `hold-to-repeat` — *default `false`*  
+  Auto re-draw and fire again while you hold the use key.
 - `spam-delay` — *default `1`*  
   Ticks between shots for Rapid/Desync/spam.
 
@@ -1890,7 +1920,21 @@ Draw bows and crossbows much faster than normal.
 
 Makes you effectively unkillable — negates fall damage, knockback and other harm. How much applies depends on the server.
 
-*No settings.*
+**General**
+
+- `full-invincible` — *default `true`*  
+  Keeps your health topped up so you stay alive. How much applies depends on the server.
+- `no-fall-damage` — *default `true`*  
+  Spoof on-ground packets while falling so the server never applies fall damage. Works on most servers and singleplayer.
+- `anti-knockback` — *default `true`*  
+  Cancel the velocity packets the server sends to knock you back. You won't get shoved by hits or explosions.
+- `instant-kill` — *default `false`*  
+  While held, instantly kills the entity you're looking at. Whether it works depends on the server. Off by default so you don't wipe everything the moment godmode turns on.
+- `infinite-hunger` — *default `true`*  
+  Keep food and saturation topped up so the hunger bar never drops and sprint never cuts out. In singleplayer this also stops starvation entirely; on servers the bar may still flicker since the server tracks real hunger, but it keeps it pinned full client-side.
+- `regen` — *default `true`*  
+  Continuously heals you back to full (works alongside or instead of full invincibility). How much applies depends on the server.
+
 
 ### hit-particles++
 
@@ -1934,6 +1978,10 @@ Lets you attack targets through walls. Whether it lands depends on the server.
 
 - `target-priority` — *default `Target.Nearest`*  
   Which entity to hit when several are in range.
+- `rotation` — *default `Rotation.None`*  
+  None = don't aim; Client = turn your view; Silent = send look packets only (server sees the aim, your camera doesn't move).
+- `range` — *default `4.5`*  
+  Max distance to a target (blocks).
 - `attack-delay` — *default `10`*  
   Ticks between attacks (lower = faster).
 - `miss-chance` — *default `0`*  
@@ -2048,7 +2096,23 @@ Fly freely. How well it holds up depends on the server's anti-cheat.
 
 **Modes** — Creative, Velocity, Motion, Glide, Jetpack, Bounce, Smooth, Static, Packet, Vanilla
 
-*No settings.*
+**General**
+
+- `mode` — *default `Mode.Creative`*  
+  Flight method, each bypassing differently. Creative flips the ability flag; Velocity/Motion/Glide drive velocity; Bounce adds a hover wobble; Smooth eases momentum; Static is a dead-stop hover; Packet reports on-ground; Jetpack thrusts where you look.
+- `anti-kick` — *default `false`*  
+  Periodically send a fake on-ground packet so servers that kick on prolonged airtime (rather than checking velocity) don't flag you. Independent of mode.
+- `anti-kick-interval` — *default `60`, hidden until enabled*  
+  Ticks between the fake on-ground reports.
+- `speed` — *default `0.5`*  
+  Horizontal flight speed (blocks/tick) for the non-creative modes.
+- `vertical-speed` — *default `0.5`*  
+  Up/down speed for jump/sneak (non-creative modes).
+- `creative-fly-speed` — *default `1.0`*  
+  Fly speed for Creative mode (1.0 = vanilla default).
+- `vanilla-pulldown-interval` — *default `8`, hidden until enabled*  
+  Vanilla mode: every N ticks, drop briefly so the server's "time in air" counter resets. This is the NCP-style trick that gets past anticheats that kick for being airborne too long. Lower = safer but jerkier.
+
 
 ### freecam++
 
@@ -2073,7 +2137,9 @@ Smooth free-flying detached camera with pathing / rotate / sneak options.
 - `hold-to-mine` — *default `true`, hidden until enabled*  
   Hold left click to mine from your real character's crosshair, and stop the moment you let go. Off ignores left click entirely while the camera is out.
 - `hold-to-use` — *default `true`, hidden until enabled*  
-  Hold right click to use whatever you are holding, from your real character rather than the camera. This is what lets you keep firing rockets while you fly the camera around, or eat, or draw a bow, without closing the camera first.
+  Hold right click to use whatever you are holding, from your real character rather than the camera. Held is held, exactly as with the camera closed: food keeps being eaten until it is finished or you let go, a bow keeps drawing, a shield stays up, and rockets keep firing while you fly the camera around.
+- `hold-on-ladders` — *default `true`*  
+  Keep your character where it is on a ladder, vine or chain of cave vines while the camera is out, instead of sliding down it. Your body gets no keys while you fly the camera, and on a ladder no keys means slipping — this holds sneak for it there, the same thing you would do yourself. If you were climbing when you opened the camera it keeps climbing; scaffolding is left alone, since sneaking on it takes you down.
 - `smoothing` — *default `0.05`*  
   How much the camera eases into a start and out of a stop. A little takes the jerkiness off without making it feel like it is floating; 0 is instant, the way Meteor moves.
 - `fly-toward-crosshair` — *default `true`*  
@@ -2147,7 +2213,19 @@ Lets you move freely through blocks. Works where the server doesn't correct your
 
 **Modes** — Flying, Motion
 
-*No settings.*
+**General**
+
+- `mode` — *default `Mode.Flying`*  
+  Flying uses the creative-flight state to make phasing stick (most reliable). Motion only sets the noClip flag and drives velocity, never touching the ability flag — lighter, and some servers react to it differently.
+- `speed` — *default `0.3`*  
+  Horizontal move speed (blocks/tick).
+- `vertical-speed` — *default `0.3`*  
+  Up/down speed for jump/sneak (blocks/tick).
+- `fly` — *default `true`*  
+  Hold your altitude and fly freely while phasing (no falling). Turn off to let gravity/auto-descend take over.
+- `auto-descend` — *default `false`*  
+  Sink straight down through blocks automatically, no need to hold sneak. Good for dropping through a floor. Ignored while fly is on unless you also press sneak.
+
 
 ### reverse-step++
 
@@ -2183,7 +2261,17 @@ Move faster than normal. How much you can get away with depends on the server's 
 
 **Modes** — Simple, Bhop, Strafe, Sprint, YPort, OnGround, Hop
 
-*No settings.*
+**General**
+
+- `mode` — *default `Mode.Simple`*  
+  How speed is applied, each defeating different checks: Simple (scale velocity), Bhop (auto-jump), Strafe (steer to keys), Sprint (force-sprint + scale), YPort (tiny per-tick hop so ground-friction checks don't apply), OnGround (scale but report grounded), Hop (continuous micro-jumps). Which survives depends on the server's anticheat — try a few.
+- `speed` — *default `0.4`*  
+  Target horizontal speed in blocks/tick.
+- `ground-only` — *default `false`*  
+  Only boost while on the ground (less obvious, fewer anti-cheat flags than air-speed).
+- `sprint-only` — *default `false`*  
+  Only boost while you're sprinting.
+
 
 ### trident-boost++
 
@@ -2295,13 +2383,31 @@ Break blocks far faster, with several methods to choose from (speed multiplier, 
 
 **Modes** — Multiplier, Packet, Abort, Vanilla, Sequenced, Nuker, SpeedMine
 
-*No settings.*
+**General**
+
+- `mode` — *default `Mode.Multiplier`*  
+  Multiplier scales break speed. Packet/Abort fire raw destroy packets. Vanilla only removes break delay. Sequenced uses the game's own sequenced break (accepted where raw packets are dropped). Nuker breaks everything in radius+reach at once. SpeedMine ramps break speed up the longer you hold attack on the same block (merged module).
+- `speed-percent` — *default `100`, hidden until enabled*  
+  100 = instant (default), 0 = normal speed, -500 = 5x slower.
+- `nuker-radius` — *default `2`, hidden until enabled*  
+  Nuker: block radius around you to break each tick. Kept within reach. Higher = far more packets (kick risk).
+- `no-break-delay` — *default `true`*  
+  Remove the cooldown between block breaks so mining is continuous. Works in singleplayer and on servers.
+
 
 ### invisibility++
 
 Turns you invisible to other players and mobs. How complete the invisibility is depends on the server.
 
-*No settings.*
+**General**
+
+- `client-self` — *default `true`*  
+  Render yourself invisible on your own screen (cosmetic; doesn't affect what others see).
+- `true-invisible` — *default `true`*  
+  In your own world, apply real invisibility server-side so mobs and other players in your world can't see you. No effect on real servers.
+- `hide-equipment` — *default `true`*  
+  Also hide your armor and held items from other players, so invisibility doesn't give you away by showing floating gear. How well this holds up depends on the server.
+
 
 ### miner++
 
@@ -2327,7 +2433,15 @@ Mines for you — vein mining, fast packet mining, or a wide excavator, all in o
 
 Copy item NBT by middle-click and apply custom NBT/components to held items (creative). Java component-system equivalent of Horion's NBT editor.
 
-*No settings.*
+**General**
+
+- `middle-click-copy` — *default `true`*  
+  Middle-click an item in any inventory to copy its full NBT to the clipboard.
+- `custom-nbt` — *default `""`*  
+  Component SNBT to apply with apply-key. Blank = use whatever you last middle-clicked / your clipboard.
+- `apply-key` — *default `Keybind.fromKey(GLFW.GLFW_KEY_N)`*  
+  Apply the NBT to the item in your hand (creative only).
+
 
 ### no-break-delay++
 
@@ -2339,13 +2453,23 @@ Removes the cooldown between breaking blocks. Mine continuously with no pause.
 
 Removes the attack-swing delay and item cooldowns (like ender pearls) so you can act back-to-back. Strength depends on the server.
 
-*No settings.*
+**General**
+
+- `attack-cooldown` — *default `true`*  
+  Always swing at full charge — no hit-swing delay between attacks.
+- `item-cooldown` — *default `true`*  
+  Clear item use cooldowns — ender pearl, chorus fruit, etc. can be used with no delay.
+
 
 ### portal-inv++
 
 Access your inventory during portal transit loading.
 
-*No settings.*
+**General**
+
+- `auto-open` — *default `false`*  
+  Open the inventory the moment portal transit starts, without pressing a key.
+
 
 ### reach++
 
@@ -2357,8 +2481,12 @@ Extends attack range with selectable targeting. Rejected by strict server anti-c
 
 **General**
 
-- `target-priority` — *default `Target.Crosshair`, hidden until enabled*  
+- `target-priority` — *default `Target.Crosshair`*  
   Crosshair = only what you aim at; others auto-select within range.
+- `rotation` — *default `Rotation.None`, hidden until enabled*  
+  None = don't aim; Client = turn your view; Silent = send look packets only (server sees the aim, camera stays put).
+- `range` — *default `5.0`*  
+  Attack range in blocks (vanilla is ~3).
 - `auto-attack` — *default `false`*  
   Automatically attack the selected target within range.
 - `hard-cap` — *default `false`*  
@@ -2397,6 +2525,10 @@ Forces chunks to reload so terrain the server sent but your client never drew sh
   How many ticks auto-refresh stays collapsed before restoring.
 - `expand-delay` — *default `0`, hidden until enabled*  
   Ticks y-drop waits before restoring after you go back above trigger-y.
+- `fire-cooldown` — *default `3.0`*  
+  The least time allowed between two refreshes, in seconds. Bobbing up and down across a line, or crossing both lines close together, would otherwise fire it over and over.
+- `verify-after` — *default `10.0`*  
+  This long after a refresh, check the render distance is back where it was before that refresh and put it back if it is not. Only the first refresh in that time is checked — it is the one that saw your real setting; any that fire after it within the same stretch would only remember the lowered value.
 
 **Visualiser**
 
@@ -2546,8 +2678,14 @@ Speeds up or slows down your game clock, with several styles and fine control.
 
 **General**
 
-- `mode` — *default `Mode.Constant`, hidden until enabled*  
+- `mode` — *default `Mode.Constant`*  
   Constant/Pulse/Ramp scale the client clock. Direct adds packet spam. Packets is spam-only. Advance sends forward-stepped positions. Smart only spams while you're acting.
+- `multiplier` — *default `2.0`, hidden until enabled*  
+  Game-speed multiplier for the client-clock modes. >1 faster, <1 slower, 1 = normal.
+- `extra-packets` — *default `2`, hidden until enabled*  
+  Direct/Packets/Advance/Smart: extra movement packets per tick (per acting-tick for Smart). Higher = more aggressive, more kick risk.
+- `pulse-on` — *default `10`, hidden until enabled*  
+  Pulse: ticks at the multiplier each cycle.
 - `pulse-off` — *default `10`, hidden until enabled*  
   Pulse: ticks at normal speed each cycle.
 - `ramp-ticks` — *default `20`, hidden until enabled*  
@@ -2574,7 +2712,19 @@ RISKY: Tries to fake your height to the server without moving you. Most anti-che
 
 **Modes** — Fixed, Oscillate, Jitter, Descend
 
-*No settings.*
+**General**
+
+- `timing` — *default `Mode.Burst`*  
+  Burst = flicker once then turn off. Constant = keep spoofing until you toggle it off.
+- `pattern` — *default `Pattern.Fixed`*  
+  How the fake Y is chosen: a fixed value, an oscillating wave, random jitter, or a smooth descent.
+- `y-level` — *default `-10`, hidden until enabled*  
+  Target Y level (Fixed/Oscillate/Jitter). Goes to the world floor and below.
+- `spread` — *default `3`, hidden until enabled*  
+  Oscillate: wave amplitude. Jitter: max random offset. Descend: blocks dropped per tick.
+- `packets` — *default `1`, hidden until enabled*  
+  Burst mode: how many spoofed packets to send before disabling.
+
 
 ## Misc
 
@@ -2721,7 +2871,33 @@ ESP for hostile mobs with an optional tracer.
 
 **Modes** — Box, Wireframe
 
-*No settings.*
+**General**
+
+- `infinite-range` — *default `false`*  
+  Ignore the range limit and show every loaded hostile mob. Note: the client only knows about entities the server has sent, so this reaches as far as your entity render distance, not literally infinite.
+- `range` — *default `128`, hidden until enabled*  
+  Only show mobs within this distance.
+
+**Render**
+
+- `mode` — *default `Mode.Box`*  
+  How the mobs are rendered.
+- `shape-mode` — *default `ShapeMode.Both`*  
+  How the shapes are rendered.
+- `fill-color` — *default `rgba(255, 0, 0, 30)`, hidden until enabled*  
+  The fill/side color.
+- `health-color` — *default `HealthColor.Off`*  
+  Tint by health (green at full, fading to red). Choose whether it colors the Outline, the Fill, or Both. Off uses the fixed colors below.
+- `line-color` — *default `rgba(255, 0, 0, 255)`*  
+  The outline color (when health-color isn't tinting the outline).
+
+**Tracers**
+
+- `tracers` — *default `true`*  
+  Draw a line from your camera to each hostile mob.
+- `tracer-color` — *default `rgba(255, 0, 0, 200)`, hidden until enabled*  
+  Color of the tracer lines.
+
 
 ### item-highlight++
 
@@ -2849,13 +3025,21 @@ Raises your measured ping by delaying KeepAlive packets, or delays all packets f
 
 - `fake-lag (risky)` — *default `false`*  
   Lag EVERYTHING — every packet in both directions is held, not just KeepAlive. This is full blink-style desync: the world freezes and your actions land in a burst when it releases. Off = only spoof the ping number.
-- `delay` — *default `250`, hidden until enabled*  
+- `delay` — *default `250`*  
   Baseline hold time (ms). Realistic fluctuation moves around this value. Keep well under ~15s or the server may time you out.
+- `realistic-fluctuation` — *default `true`*  
+  Make the spoofed ping wander like a real connection instead of sitting on a flat number.
+- `min-percent` — *default `80`, hidden until enabled*  
+  Lowest the delay may drift to, as a percent of the baseline.
 - `max-percent` — *default `120`, hidden until enabled*  
   Highest the delay may drift to, as a percent of the baseline.
+- `change-per-tick` — *default `20`, hidden until enabled*  
+  How far the delay can randomly move each tick, as a percent of the min-max range. Lower = smoother drift.
 
 **Ticks**
 
+- `delay-outgoing (risky)` — *default `false`*  
+  Hold packets you send. This is what actually raises your measured ping.
 - `outgoing-ticks` — *default `5`, hidden until enabled*  
   How many ticks to hold outgoing packets (20 ticks = 1 second). Used instead of the ms delay when ticks are on.
 - `delay-inbound (risky)` — *default `false`*  

@@ -587,7 +587,7 @@ public class ChunkFinder extends Module {
             if (mc.world.getChunk(cx, cz, net.minecraft.world.chunk.ChunkStatus.FULL, false) instanceof net.minecraft.world.chunk.WorldChunk) {
                 long k = ChunkPos.toLong(cx, cz);
                 int t = loaded.merge(k, 1, Integer::sum);
-                if (t == loadedTicksRequired.get()) { ChunkPos fp = new ChunkPos(k); flagged.put(k, new BlockPos(fp.getStartX() + 8, 64, fp.getStartZ() + 8)); }
+                if (t == loadedTicksRequired.get()) { ChunkPos fp = new ChunkPos(k); flag(new BlockPos(fp.getStartX() + 8, 64, fp.getStartZ() + 8)); }
             }
         }
         loaded.keySet().removeIf(k -> Math.abs(new ChunkPos(k).x - c.x) > r || Math.abs(new ChunkPos(k).z - c.z) > r);

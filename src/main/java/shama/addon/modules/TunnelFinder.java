@@ -68,12 +68,46 @@ public class TunnelFinder extends Module {
         super(shama.addon.ShamaAddon.HUNT, "tunnel-finder++", "Finds long straight tunnels players have dug, including ones far underground you'd never stumble across.");
     }
 
-    @Override
-    public void onActivate() { segments.clear(); }
+    private java.util.concurrent.ExecutorService scanner;
 
+    @Override
+    public void onActivate() {
+        segments.clear();
+        scanner = java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
+            Thread t = new Thread(r, "shama-tunnelfinder");
+            t.setDaemon(true); t.setPriority(Thread.MIN_PRIORITY);
+            return t;
+        });
+    }
+
+    @Override
+    public void onDeactivate() {
+        if (scanner != null) { scanner.shutdownNow(); scanner = null; }
+        segments.clear();
+    }
+
+    /**
+     * Each chunk is read on a worker thread. Walking every row of a chunk at every height in two
+     * directions is several hundred thousand block reads, which on the game thread was a hitch for
+     * every chunk that arrived.
+     */
     @EventHandler
     private void onChunkData(ChunkDataEvent event) {
         if (!(event.chunk() instanceof WorldChunk chunk)) return;
+        // forget tunnels well out of drawing range, so a long session does not keep every one it saw
+        if (mc.player != null) {
+            int keep = (int) Math.ceil(renderDistance.get() / 16.0) + 4;
+            int pcx = mc.player.getChunkPos().x, pcz = mc.player.getChunkPos().z;
+            segments.keySet().removeIf(k -> Math.abs(net.minecraft.util.math.ChunkPos.getPackedX(k) - pcx) > keep
+                                         || Math.abs(net.minecraft.util.math.ChunkPos.getPackedZ(k) - pcz) > keep);
+        }
+        var s = scanner;
+        if (s == null || s.isShutdown()) return;
+        try { s.submit(() -> { try { scan(chunk); } catch (Throwable ignored) {} }); }
+        catch (java.util.concurrent.RejectedExecutionException ignored) {}
+    }
+
+    private void scan(WorldChunk chunk) {
         int bottom = chunk.getBottomY();
         int top = Math.min(maxY.get(), chunk.getTopYInclusive());
         int cx = chunk.getPos().getStartX(), cz = chunk.getPos().getStartZ();

@@ -177,9 +177,9 @@ public class GeodeFinder extends Module {
         .defaultValue(30).min(-64).max(320).sliderRange(-64, 128).build());
 
     private final Setting<Integer> minAmethyst = sgGeode.add(new IntSetting.Builder()
-        .name("min-amethyst")
-        .description("How much amethyst a chunk needs before it counts as a geode at all.")
-        .defaultValue(12).min(2).max(200).sliderRange(4, 60).build());
+        .name("amethyst-needed")
+        .description("How much amethyst a chunk needs before any of it is marked. At 1 a single crystal, bud or block is marked on its own — a lone cluster left behind is often the only sign a geode was there. Raise it to only see bigger finds.")
+        .defaultValue(1).min(1).max(200).sliderRange(1, 60).build());
 
     private final Setting<Boolean> onlySuspicious = sgGeode.add(new BoolSetting.Builder()
         .name("only-suspicious")
@@ -312,6 +312,10 @@ public class GeodeFinder extends Module {
         return n;
     }
 
+    private boolean isGeodeBlock(net.minecraft.block.BlockState st) {
+        return !st.isAir() && stageOf(shama.addon.util.BlockPaths.of(st.getBlock())) >= 0;
+    }
+
     private int stageOf(String path) {
         return switch (path) {
             case "budding_amethyst" -> BUDDING;
@@ -333,13 +337,21 @@ public class GeodeFinder extends Module {
 
         int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
         int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
-        int grown = 0, growable = 0, buddingCount = 0, partial = 0;
+        int grown = 0, growable = 0, buddingCount = 0, partial = 0, amethystCount = 0;
 
-        for (int x = 0; x < 16; x++) for (int z = 0; z < 16; z++) for (int y = bottom; y <= top; y++) {
+        // Only sections whose palette holds amethyst or dripstone at all are walked. Most of a chunk
+        // has neither, and asking the palette costs almost nothing next to reading 4096 blocks.
+        net.minecraft.world.chunk.ChunkSection[] sections = chunk.getSectionArray();
+        for (int si = 0; si < sections.length; si++) {
+            net.minecraft.world.chunk.ChunkSection sec = sections[si];
+            if (sec == null || sec.isEmpty() || !sec.hasAny(this::isGeodeBlock)) continue;
+            int sy = chunk.sectionIndexToCoord(si) << 4;
+        for (int x = 0; x < 16; x++) for (int z = 0; z < 16; z++) for (int y = Math.max(bottom, sy); y <= Math.min(top, sy + 15); y++) {
             var st = chunk.getBlockState(m.set(bx + x, y, bz + z));
             if (st.isAir()) continue;
             int stage = stageOf(shama.addon.util.BlockPaths.of(st.getBlock()));
             if (stage < 0) continue;
+            if (stage != DRIP) amethystCount++;
             if (stage == PLAIN && !showBlocks.get()) {
                 // still counts toward the geode's extent, just not drawn
                 minX = Math.min(minX, bx + x); maxX = Math.max(maxX, bx + x);
@@ -362,6 +374,7 @@ public class GeodeFinder extends Module {
             if (stage == SMALL || stage == MEDIUM || stage == LARGE) partial++;   // still growing
             if (stage != PLAIN && stage != DRIP) growable++;
         }
+        }
 
         // whole-geode grouping from the supplied AmethystESP scanner
         if (useFloodFill.get() && mc.world != null) {
@@ -379,7 +392,7 @@ public class GeodeFinder extends Module {
         }
 
         long key = chunk.getPos().toLong();
-        if (found.isEmpty() || growable < minAmethyst.get()) {
+        if (found.isEmpty() || amethystCount < minAmethyst.get() && !(amethystCount == 0 && dripstone.get())) {
             // An empty rescan usually means the server stopped sending it, not that it is gone.
             // an empty scan means the server stopped sending it, not that it is gone
             if (!lookBypass.get()) { byChunk.remove(key); bounds.remove(key); }
@@ -421,7 +434,7 @@ public class GeodeFinder extends Module {
         }
         bounds.put(key, new int[]{minX, minY, minZ, maxX, maxY, maxZ, suspicious ? 1 : 0, stripped, untouched});
 
-        if (chat.get() && announced.add(key)) {
+        if (chat.get() && amethystCount > 0 && announced.add(key)) {
             ChunkPos cp = chunk.getPos();
             shama.addon.util.Chat.info("[GeodeFinder] geode at %d, %d, %d — %d%% grown%s",
                 cp.getStartX() + 8, minY, cp.getStartZ() + 8, pct, suspicious ? " (looks farmed)" : "");
@@ -502,20 +515,25 @@ public class GeodeFinder extends Module {
         Mode md = mode.get();
 
         if (md == Mode.Crystals || md == Mode.Both) {
+            // colours worked out once a frame, not once per crystal — a big geode is hundreds of boxes
+            Color[] lines = new Color[DRIP + 1], fills = new Color[DRIP + 1];
+            for (int st = 0; st <= DRIP; st++) {
+                lines[st] = colourFor(st);
+                fills[st] = new Color(lines[st].r, lines[st].g, lines[st].b, Math.min(120, lines[st].a / 3));
+            }
+            var cc = cleanColor.get();
+            Color cleanLine = new Color(cc.r, cc.g, cc.b, cc.a);
+            Color cleanFill = new Color(cc.r, cc.g, cc.b, Math.min(120, cc.a / 3));
             for (Map.Entry<Long, List<Crystal>> e : byChunk.entrySet()) {
                 ChunkPos cp = new ChunkPos(e.getKey());
                 if (Math.abs(cp.x - pcx) > r || Math.abs(cp.z - pcz) > r) continue;
                 int[] b = bounds.get(e.getKey());
                 boolean clean = cleanClusters.get() && b != null && b.length > 8 && b[8] == 1;
                 for (Crystal c : e.getValue()) {
-                    Color line = colourFor(c.stage());
-                    if (clean && (c.stage() == SMALL || c.stage() == MEDIUM || c.stage() == LARGE)) {
-                        var cc = cleanColor.get();
-                        line = new Color(cc.r, cc.g, cc.b, cc.a);
-                    }
-                    Color fill = new Color(line.r, line.g, line.b, Math.min(120, line.a / 3));
+                    int st = c.stage();
+                    boolean useClean = clean && (st == SMALL || st == MEDIUM || st == LARGE);
                     event.renderer.box(c.x(), c.y(), c.z(), c.x() + 1, c.y() + 1, c.z() + 1,
-                        fill, line, ShapeMode.Both, 0);
+                        useClean ? cleanFill : fills[st], useClean ? cleanLine : lines[st], ShapeMode.Both, 0);
                 }
             }
         }

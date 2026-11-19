@@ -40,11 +40,25 @@ public class RenderDistanceBypass extends Module {
     private final Setting<Integer> refreshTicks = sg.add(new IntSetting.Builder().name("refresh-ticks").description("How many ticks auto-refresh stays collapsed before restoring.").defaultValue(20).min(1).max(100).visible(autoRefresh::get).build());
     private final Setting<Integer> expandDelay = sg.add(new IntSetting.Builder().name("expand-delay").description("Ticks y-drop waits before restoring after you go back above trigger-y.").defaultValue(0).min(0).max(100).visible(yDrop::get).build());
 
+    private final Setting<Double> cooldown = sg.add(new DoubleSetting.Builder()
+        .name("fire-cooldown")
+        .description("The least time allowed between two refreshes, in seconds. Bobbing up and down across a line, or crossing both lines close together, would otherwise fire it over and over.")
+        .defaultValue(3.0).min(0).max(30).sliderRange(0, 10).decimalPlaces(1).build());
+    private final Setting<Double> verifyAfter = sg.add(new DoubleSetting.Builder()
+        .name("verify-after")
+        .description("This long after a refresh, check the render distance is back where it was before that refresh and put it back if it is not. Only the first refresh in that time is checked — it is the one that saw your real setting; any that fire after it within the same stretch would only remember the lowered value.")
+        .defaultValue(10.0).min(1).max(60).sliderRange(2, 30).decimalPlaces(1).build());
+
     private boolean wasBelow, wasBelow2;
     private double lastY = Double.MAX_VALUE;
     private int sequence;      // auto-refresh countdown
     private int restore = -1;  // captured distance to restore
     private int expandTimer;
+    /** Your own render distance, as last seen while this module was not holding it down. */
+    private int userVD = -1;
+    private long lastFire;     // when a refresh last fired
+    private long windowStart;  // the first refresh of the current check window, 0 when none is open
+    private int windowVD = -1; // the render distance that first refresh started from
 
     private final SettingGroup sgView = settings.createGroup("Visualiser");
     private final Setting<Boolean> visualise = sgView.add(new BoolSetting.Builder()
@@ -118,6 +132,8 @@ public class RenderDistanceBypass extends Module {
     private void setVD(int v) { mc.options.getViewDistance().setValue(v); }
 
     @Override public void onActivate() {
+        lastFire = 0; windowStart = 0; windowVD = -1; sequence = 0;
+        userVD = mc.options != null ? getVD() : -1;
         if (kryptonLightFinder.get()) setKryptonLightFinder(true);
         if (manualMode.get() && mc.options != null) { restore = getVD(); setVD(lowDistance.get()); }
         if (mc.player != null) anchor = mc.player.getChunkPos();
@@ -125,16 +141,60 @@ public class RenderDistanceBypass extends Module {
 
     @Override public void onDeactivate() {
         if (restore > 0 && mc.options != null) setVD(restore);
-        restore = -1; sequence = 0; expandTimer = 0; wasBelow = false;
+        else if (windowVD > 0 && mc.options != null && getVD() != windowVD) setVD(windowVD);
+        restore = -1; sequence = 0; expandTimer = 0; wasBelow = false; windowStart = 0; windowVD = -1;
         if (kryptonLightFinder.get()) setKryptonLightFinder(false);
+    }
+
+    /**
+     * The distance to come back to. Never the lowered value: if the setting already reads low when a
+     * refresh starts — a second line crossed mid-refresh, or bobbing across one — the real number is
+     * the one seen before any of it began. Capturing the lowered value is what left it stuck at 2.
+     */
+    private int normalVD() {
+        int v = getVD();
+        if (v > lowDistance.get()) return v;
+        if (userVD > lowDistance.get()) return userVD;
+        if (windowVD > lowDistance.get()) return windowVD;
+        return v;
+    }
+
+    /**
+     * Whether a refresh may fire now. Enforces the cooldown, and opens a check window on the first
+     * refresh after a quiet spell, remembering the distance it started from.
+     */
+    private boolean fire() {
+        long now = System.currentTimeMillis();
+        if (lastFire > 0 && now - lastFire < (long) (cooldown.get() * 1000)) return false;
+        lastFire = now;
+        if (windowStart == 0) {
+            windowStart = now;
+            windowVD = restore > 0 ? restore : normalVD();
+        }
+        return true;
+    }
+
+    /** Leaving a server mid-refresh must not save the lowered distance into your options. */
+    @EventHandler
+    private void onLeave(meteordevelopment.meteorclient.events.game.GameLeftEvent event) {
+        if (mc.options == null) return;
+        if (restore > 0) setVD(restore);
+        else if (windowVD > 0 && getVD() != windowVD) setVD(windowVD);
+        restore = -1; sequence = 0; windowStart = 0; windowVD = -1; wasBelow = wasBelow2 = false; lastY = Double.MAX_VALUE;
     }
 
     @EventHandler
     private void onTick(TickEvent.Pre event) {
-        if (mc.player == null || mc.options == null) return;
+        if (mc.options == null) return;
+        if (mc.player == null) {
+            // no world to refresh — never leave the setting lowered while there is nothing to come back for
+            if (restore > 0) { setVD(restore); restore = -1; sequence = 0; }
+            return;
+        }
 
         // manual: hold low the whole time
-        if (manualMode.get()) { if (getVD() != lowDistance.get()) { if (restore < 0) restore = getVD(); setVD(lowDistance.get()); } return; }
+        if (manualMode.get()) { if (getVD() != lowDistance.get()) { if (restore < 0) restore = normalVD(); setVD(lowDistance.get()); } return; }
+        if (restore < 0 && sequence == 0) userVD = getVD();
 
         double y = mc.player.getY();
         boolean below = y <= triggerY.get();
@@ -148,16 +208,35 @@ public class RenderDistanceBypass extends Module {
         boolean crossed = (below && !wasBelow) || (below2 && !wasBelow2)
             || (jumped && (below || below2));
 
-        if (autoRefresh.get() && crossed) {
-            restore = getVD(); setVD(lowDistance.get()); sequence = refreshTicks.get();
+        if (autoRefresh.get() && crossed && fire()) {
+            // only capture when nothing is already lowered, so a refresh on top of a refresh still
+            // comes back to your real setting
+            if (restore < 0) restore = normalVD();
+            setVD(lowDistance.get()); sequence = refreshTicks.get();
             anchor = mc.player.getChunkPos();   // shading measures from here
         }
-        if (sequence > 0 && --sequence == 0 && restore > 0) { setVD(restore); restore = -1; }
+        boolean heldLow = yDrop.get() && below;
+        if (sequence > 0 && --sequence == 0 && restore > 0 && !heldLow) { setVD(restore); restore = -1; }
 
         // y-drop: stay low while below, restore (after delay) when back above
         if (yDrop.get()) {
-            if (below) { if (restore < 0) { restore = getVD(); if (restore <= 0) restore = 12; } setVD(lowDistance.get()); expandTimer = expandDelay.get(); }
-            else if (restore > 0) { if (expandTimer > 0) expandTimer--; else { setVD(restore); restore = -1; } }
+            if (below) { if (restore < 0) { restore = normalVD(); if (restore <= 0) restore = 12; } setVD(lowDistance.get()); expandTimer = expandDelay.get(); }
+            else if (restore > 0 && sequence == 0) { if (expandTimer > 0) expandTimer--; else { setVD(restore); restore = -1; } }
+        }
+
+        // the check: some time after the first refresh of a stretch, the distance must be back to
+        // what it was before that refresh. A refresh still running is let finish first, and y-drop
+        // holding it low on purpose is left alone but told the right number to go back to.
+        long now = System.currentTimeMillis();
+        if (windowStart > 0 && now - windowStart >= (long) (verifyAfter.get() * 1000) && sequence == 0) {
+            if (windowVD > 0) {
+                if (heldLow) restore = windowVD;
+                else {
+                    if (getVD() != windowVD) setVD(windowVD);
+                    restore = -1;
+                }
+            }
+            windowStart = 0;
         }
         wasBelow = below;
         wasBelow2 = below2;

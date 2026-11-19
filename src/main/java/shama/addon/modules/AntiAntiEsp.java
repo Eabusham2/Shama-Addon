@@ -340,17 +340,19 @@ public class AntiAntiEsp extends Module {
         if (found.isEmpty() || mc.player == null) return;
         SettingColor bc = blockColor.get(), hc = hintColor.get();
         var cam = meteordevelopment.meteorclient.utils.render.RenderUtils.center;
+        // two colour pairs for the whole frame instead of a fresh pair for every block
+        Color bLine = new Color(bc.r, bc.g, bc.b, bc.a), bFill = new Color(bc.r, bc.g, bc.b, Math.min(120, bc.a / 3));
+        Color hLine = new Color(hc.r, hc.g, hc.b, hc.a), hFill = new Color(hc.r, hc.g, hc.b, Math.min(120, hc.a / 3));
+        var mode = shapeMode.get();
+        boolean lines = tracers.get();
 
         for (Map.Entry<Long, long[]> e : found.entrySet()) {
-            BlockPos p = BlockPos.fromLong(e.getKey());
+            long k = e.getKey();
+            int x = BlockPos.unpackLongX(k), y = BlockPos.unpackLongY(k), z = BlockPos.unpackLongZ(k);
             boolean hint = e.getValue()[1] == 1;
-            SettingColor c = hint ? hc : bc;
-            Color line = new Color(c.r, c.g, c.b, c.a);
-            Color fill = new Color(c.r, c.g, c.b, Math.min(120, c.a / 3));
-            event.renderer.box(p.getX(), p.getY(), p.getZ(), p.getX() + 1, p.getY() + 1, p.getZ() + 1,
-                fill, line, shapeMode.get(), 0);
-            if (tracers.get())
-                event.renderer.line(cam.x, cam.y, cam.z, p.getX() + 0.5, p.getY() + 0.5, p.getZ() + 0.5, line);
+            Color line = hint ? hLine : bLine;
+            event.renderer.box(x, y, z, x + 1, y + 1, z + 1, hint ? hFill : bFill, line, mode, 0);
+            if (lines) event.renderer.line(cam.x, cam.y, cam.z, x + 0.5, y + 0.5, z + 0.5, line);
         }
     }
 

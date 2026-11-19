@@ -143,8 +143,8 @@ def parse(path):
     settings = []
     for sm in re.finditer(
         r'Setting<((?:[^<>]|<[^<>]*>)+)>\s+\w+\s*=\s*(sg\w*|settings\.getDefaultGroup\(\))\.add\('
-        r'(?:(?!\.build\(\)\);).)*?\.name\("([^"]+)"\)'
-        r'((?:(?!\.build\(\)\);).)*?)\.build\(\)\);', s, re.DOTALL):
+        r'(?:(?!\.build\(\)\s*\)\s*;).)*?\.name\("([^"]+)"\)'
+        r'((?:(?!\.build\(\)\s*\)\s*;).)*?)\.build\(\)\s*\)\s*;', s, re.DOTALL):
         typ, grp, nm, rest = sm.groups()
         d = re.search(r'\.description\("((?:[^"\\]|\\.)*)"\)', rest)
         dv = rest.find(".defaultValue(")

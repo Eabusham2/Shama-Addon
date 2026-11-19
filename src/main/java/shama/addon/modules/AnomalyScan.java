@@ -127,7 +127,7 @@ public class AnomalyScan extends Module {
     private final Map<Long, double[]> flagged = new ConcurrentHashMap<>();   // chunk -> {score, signals}
     private final java.util.Set<Long> announced = ConcurrentHashMap.newKeySet();
     private final ArrayDeque<WorldChunk> pending = new ArrayDeque<>();
-    private long learned;
+    private volatile long learned;
     private String dimension = "";
 
     public AnomalyScan() {
@@ -135,18 +135,38 @@ public class AnomalyScan extends Module {
             "Learns what ordinary ground looks like on this server, then flags the chunks that do not match — finds builds made from plain terrain that block lists never catch.");
     }
 
+    /**
+     * One worker thread does the measuring, so the running averages are only ever touched by it.
+     * Reading a chunk here used to happen on the game thread, a few per tick, and each one is tens of
+     * thousands of blocks.
+     */
+    private java.util.concurrent.ExecutorService worker;
+
     @Override
     public void onActivate() {
         for (int i = 0; i < COUNT; i++) stats[i] = new Running();
         flagged.clear(); announced.clear(); learned = 0;
         synchronized (pending) { pending.clear(); }
         dimension = currentDimension();
+        worker = java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
+            Thread t = new Thread(r, "shama-anomalyscan");
+            t.setDaemon(true); t.setPriority(Thread.MIN_PRIORITY);
+            return t;
+        });
     }
 
     @Override
     public void onDeactivate() {
+        if (worker != null) { worker.shutdownNow(); worker = null; }
         flagged.clear(); announced.clear();
         synchronized (pending) { pending.clear(); }
+    }
+
+    private void onWorker(Runnable r) {
+        var w = worker;
+        if (w == null || w.isShutdown()) return;
+        try { w.submit(() -> { try { r.run(); } catch (Throwable ignored) {} }); }
+        catch (java.util.concurrent.RejectedExecutionException ignored) {}
     }
 
     private String currentDimension() {
@@ -171,8 +191,7 @@ public class AnomalyScan extends Module {
             String now = currentDimension();
             if (!now.equals(dimension)) {
                 dimension = now;
-                for (int i = 0; i < COUNT; i++) stats[i] = new Running();
-                learned = 0;
+                onWorker(() -> { for (int i = 0; i < COUNT; i++) stats[i] = new Running(); learned = 0; });
                 flagged.clear();
                 if (chat.get()) shama.addon.util.Chat.info("[AnomalyScan] new dimension — learning what normal looks like here");
             }
@@ -183,13 +202,31 @@ public class AnomalyScan extends Module {
             WorldChunk c;
             synchronized (pending) { c = pending.pollFirst(); }
             if (c == null) break;
-            try { measure(c); } catch (Throwable ignored) {}
+            final WorldChunk chunk = c;
+            onWorker(() -> measure(chunk));
         }
 
         int pcx = mc.player.getChunkPos().x, pcz = mc.player.getChunkPos().z;
         int keep = chunkRange.get() + 12;
         flagged.keySet().removeIf(k -> Math.abs(new ChunkPos(k).x - pcx) > keep
                                     || Math.abs(new ChunkPos(k).z - pcz) > keep);
+    }
+
+    /** Whether a block type is natural ground, worked out once per type rather than once per block. */
+    private static final Map<net.minecraft.block.Block, Boolean> GROUND = new ConcurrentHashMap<>();
+
+    private static boolean isGround(net.minecraft.block.Block b) {
+        Boolean g = GROUND.get(b);
+        if (g == null) {
+            String p = shama.addon.util.BlockPaths.of(b);
+            g = p.contains("stone") || p.contains("deepslate") || p.contains("dirt")
+                || p.contains("gravel") || p.contains("sand") || p.contains("tuff")
+                || p.contains("granite") || p.contains("diorite") || p.contains("andesite")
+                || p.contains("netherrack") || p.contains("water") || p.contains("lava")
+                || p.contains("ore") || p.contains("basalt");
+            GROUND.put(b, g);
+        }
+        return g;
     }
 
     /** Reduce a chunk to five plain numbers. Nothing here names a block on purpose. */
@@ -217,21 +254,21 @@ public class AnomalyScan extends Module {
                     }
                     solid++;
                     top = y;
-                    String p = shama.addon.util.BlockPaths.of(st.getBlock());
                     // "stone" here means whatever the ground is naturally made of, not a fixed list
-                    if (!p.contains("stone") && !p.contains("deepslate") && !p.contains("dirt")
-                        && !p.contains("gravel") && !p.contains("sand") && !p.contains("tuff")
-                        && !p.contains("granite") && !p.contains("diorite") && !p.contains("andesite")
-                        && !p.contains("netherrack") && !p.contains("water") && !p.contains("lava")
-                        && !p.contains("ore") && !p.contains("water") && !p.contains("basalt")) {
+                    if (!isGround(st.getBlock())) {
                         nonStone++;
                         // a straight run of the same placed block is a wall, floor or ceiling
                         run++;
                         if (run >= 4) axisRuns++;
                     } else run = 0;
 
+                    // placed lights only: a lava lake is hundreds of glowing blocks and says nothing,
+                    // and comparing every light with every other one is what made those chunks crawl
                     try {
-                        if (st.getLuminance() > 0) { lights++; lightPositions.add(new BlockPos(bx + x, y, bz + z)); }
+                        if (st.getLuminance() > 0 && st.getFluidState().isEmpty()) {
+                            lights++;
+                            if (lightPositions.size() < 128) lightPositions.add(new BlockPos(bx + x, y, bz + z));
+                        }
                     } catch (Throwable ignored) {}
                 }
                 surface[x * 16 + z] = top;

@@ -107,6 +107,11 @@ public class HiddenPlayerDetect extends Module {
     private void onGhostChunks(meteordevelopment.meteorclient.events.world.ChunkDataEvent event) {
         if (!ghostChunks.get() || mc.world == null || mc.player == null) return;
         long now = System.currentTimeMillis();
+        var self = shama.addon.util.SelfActivity.INSTANCE;
+        // Ground streams back at full speed after a pearl or teleport, and ground you only just left
+        // is still in the server's memory because of you. Neither says anything about anybody else.
+        if (self.teleportedWithin(6000)) { chunkStreak = 0; prevChunkAt = now; return; }
+        if (self.leftRecently(event.chunk().getPos().toLong(), 10 * 60_000L)) { prevChunkAt = now; return; }
         if (prevChunkAt > 0 && now - prevChunkAt <= 3) {
             if (++chunkStreak >= 24) {
                 chunkStreak = 0;
@@ -134,7 +139,9 @@ public class HiddenPlayerDetect extends Module {
 
         // player noises with nobody around to have made them
         if (soundsNoSource.get()
-            && event.packet instanceof net.minecraft.network.packet.s2c.play.PlaySoundS2CPacket p) {
+            && event.packet instanceof net.minecraft.network.packet.s2c.play.PlaySoundS2CPacket p
+            && !shama.addon.util.SelfActivity.INSTANCE.pearlInFlight()) {
+            // a pearl you threw lands with a sound where you are not standing yet; that one is yours
             try {
                 // position only: naming the sound needs an API this build cannot confirm, and the
                 // position is the part that matters anyway
@@ -160,18 +167,64 @@ public class HiddenPlayerDetect extends Module {
     @EventHandler
     private void onReceive(PacketEvent.Receive event) {
         if (mc.player == null || mc.world == null) return;
-        // rubberband: server correcting your position while you weren't moving fast = something loaded nearby
+        // rubberband: server correcting your position while you weren't moving fast = something loaded nearby.
+        // Checked a tick later, once the correction has been applied, so its size is known.
         if (event.packet instanceof PlayerPositionLookS2CPacket) {
-            addScore(mc.player.getChunkPos().toLong(), 3, "RUBBERBAND");
+            pendingRubberband = new double[]{mc.player.getX(), mc.player.getY(), mc.player.getZ(),
+                shama.addon.util.SelfActivity.INSTANCE.groundSpeed(), shama.addon.util.SelfActivity.INSTANCE.ownTeleportExpected() ? 1 : 0};
         }
         // a container screen opened below Y0 nearby (loot correlation)
-        else if (event.packet instanceof OpenScreenS2CPacket && mc.player.getY() < 0) {
-            addScore(mc.player.getChunkPos().toLong(), 2, "SCREEN_OPEN_Y<0");
+        else if (event.packet instanceof OpenScreenS2CPacket && someoneElsesStorage()) {
+            addScore(storageChunk(), 2, "SCREEN_OPEN_Y<0");
         }
-        // inventory contents pushed for an open container below Y0 = confirmed loot/storage nearby
-        else if (event.packet instanceof InventoryS2CPacket && mc.player.getY() < 0) {
-            addScore(mc.player.getChunkPos().toLong(), 5, "LOOT_CONTENTS");
+        // inventory contents pushed for an open container below Y0 = confirmed loot/storage nearby.
+        // Window 0 is your own inventory, which the server resends on joining, respawning and more.
+        else if (event.packet instanceof InventoryS2CPacket inv && inv.syncId() != 0 && someoneElsesStorage()) {
+            addScore(storageChunk(), 5, "LOOT_CONTENTS");
         }
+    }
+
+    /** The position-correction waiting to be judged, as {x, y, z, speed, ownTeleport}. */
+    private volatile double[] pendingRubberband;
+
+    /**
+     * Judge a correction once it has landed. Your own pearls, chorus fruit, respawns and world
+     * changes all arrive as the same packet, and so does any teleport — those move you a long way.
+     * A real rubberband is a small shove back while you were moving at walking pace.
+     */
+    @EventHandler
+    private void onTickRubberband(meteordevelopment.meteorclient.events.world.TickEvent.Post event) {
+        double[] r = pendingRubberband;
+        if (r == null || mc.player == null) return;
+        pendingRubberband = null;
+        double dx = mc.player.getX() - r[0], dy = mc.player.getY() - r[1], dz = mc.player.getZ() - r[2];
+        double moved = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (r[4] == 1) return;                 // a pearl, chorus fruit, respawn or new world of yours
+        if (moved > 8) return;                 // a teleport, not a correction
+        if (r[3] > 0.45) return;               // you were going faster than sprinting; that is on you
+        if (mc.player.isGliding() || mc.player.hasVehicle()) return;
+        addScore(mc.player.getChunkPos().toLong(), 1, "RUBBERBAND");
+    }
+
+    /**
+     * The container just opened is underground and not one of yours. Your ender chest is always
+     * yours, and so is anything you placed yourself this session; opening those says nothing about
+     * anybody else.
+     */
+    private boolean someoneElsesStorage() {
+        if (mc.world == null || mc.player == null) return false;
+        BlockPos at = shama.addon.util.SelfActivity.INSTANCE.lastClicked(3000);
+        if (at == null) return false;                     // not a block you opened (a villager, your own bag)
+        if (at.getY() >= 0) return false;
+        if (shama.addon.util.SelfActivity.INSTANCE.placedByMe(at)) return false;
+        var block = mc.world.getBlockState(at).getBlock();
+        return block != net.minecraft.block.Blocks.ENDER_CHEST
+            && block instanceof net.minecraft.block.BlockWithEntity;
+    }
+
+    private long storageChunk() {
+        BlockPos at = shama.addon.util.SelfActivity.INSTANCE.lastClicked(3000);
+        return at != null ? new ChunkPos(at).toLong() : mc.player.getChunkPos().toLong();
     }
 
     @EventHandler

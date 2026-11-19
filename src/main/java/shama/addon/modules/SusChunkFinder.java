@@ -91,7 +91,7 @@ public class SusChunkFinder extends Module {
     private final SettingGroup sgTrace = settings.createGroup("Player Traces");
     private final Setting<Boolean> playerWasHere = sgTrace.add(new BoolSetting.Builder()
         .name("active-chunk")
-        .description("Flag chunks somebody else is holding open. A chunk read from disk takes real time to hand over; one already in memory for a player comes back almost instantly, so a run of instant arrivals means someone is keeping it live. Available on its own as active-chunk-detector++, which reads the chunk's inhabited clock as well and gives you far more detail.")
+        .description("Flag chunks somebody else is holding open. A chunk read from disk takes real time to hand over; one already in memory for a player comes back almost instantly, so a run of instant arrivals means someone is keeping it live. Available on its own as active-chunk-detector++, which also compares each chunk against how you left it and gives you far more detail. Your own pearls and teleports, and ground you only just left, are put down to you.")
         .defaultValue(false).build());
     private final Setting<Integer> traceInstantMs = sgTrace.add(new IntSetting.Builder()
         .name("instant-threshold")
@@ -131,20 +131,12 @@ public class SusChunkFinder extends Module {
         .name("kelp-surface-y")
         .description("Y a kelp column's top must reach to count as grown-to-max (ocean surface is 62).")
         .defaultValue(62).min(0).max(120).sliderRange(50, 70).visible(() -> kelp.get() && fullKelpOnly.get()).build());
-    private final Setting<Boolean> inhabitedTime = sgIndirect.add(new BoolSetting.Builder()
-        .name("long-loaded-chunks")
-        .description("Flag chunks the server has kept loaded/inhabited for a long time (a base players stay near). Uses the chunk's inhabited-time counter.")
-        .defaultValue(false).build());
     private final Setting<Boolean> scannerScore = sgIndirect.add(new BoolSetting.Builder()
         .name("weighted-scoring")
         .description("Their ChunkScanner weighted scoring, added on top: vine-length + amethyst-cluster-size + full beehives combined into one score.")
         .defaultValue(false).build());
     private final Setting<Integer> scannerThreshold = sgIndirect.add(new IntSetting.Builder()
         .name("weighted-min-score").description("Combined scanner score to flag a chunk.").defaultValue(6).min(1).max(50).sliderRange(1,20).visible(() -> customThresholds.get() && scannerScore.get()).build());
-    private final Setting<Integer> inhabitedMinutes = sgIndirect.add(new IntSetting.Builder()
-        .name("inhabited-minutes")
-        .description("Minimum inhabited minutes to flag a chunk (180 = three hours).")
-        .defaultValue(180).min(1).max(1440).sliderRange(10, 360).visible(inhabitedTime::get).build());
     private final Setting<Integer> growthLength = sgIndirect.add(new IntSetting.Builder()
         .name("min-column-height")
         .description("A vine/cave-vine/bamboo/sugar-cane/kelp column grown at least this tall flags the chunk. Runs alongside the per-type counts.")
@@ -327,7 +319,10 @@ public class SusChunkFinder extends Module {
     private void onChunkData(ChunkDataEvent event) {
         if (playerWasHere.get() && event.chunk() instanceof WorldChunk wc) {
             long now = System.currentTimeMillis();
-            if (prevChunkAt > 0 && now - prevChunkAt <= traceInstantMs.get()) {
+            var self = shama.addon.util.SelfActivity.INSTANCE;
+            if (self.teleportedWithin(6000)) { traceStreak = 0; prevChunkAt = now; }
+            else if (self.leftRecently(wc.getPos().toLong(), 10 * 60_000L)) prevChunkAt = now;
+            else if (prevChunkAt > 0 && now - prevChunkAt <= traceInstantMs.get()) {
                 if (++traceStreak >= traceRun.get()) traceChunks.add(wc.getPos().toLong());
             } else traceStreak = 0;
             prevChunkAt = now;
@@ -428,8 +423,6 @@ public class SusChunkFinder extends Module {
         counts.put(zoneKey(chunk.getPos().x, chunk.getPos().z), c);
         kelpFarms.put(zoneKey(chunk.getPos().x, chunk.getPos().z), isKelpFarm(chunk));
         longGrowth.put(zoneKey(chunk.getPos().x, chunk.getPos().z), hasLongGrowth(chunk));
-        if (chunk.getInhabitedTime() >= (long) inhabitedMinutes.get() * 60L * 20L) highInhabited.add(zoneKey(chunk.getPos().x, chunk.getPos().z));
-        else highInhabited.remove(zoneKey(chunk.getPos().x, chunk.getPos().z));
         if (scannerScore.get()) {
             int sc = computeScannerScore(chunk);
             if (sc >= scaled(scannerThreshold, 6)) highScanner.add(zoneKey(chunk.getPos().x, chunk.getPos().z)); else highScanner.remove(zoneKey(chunk.getPos().x, chunk.getPos().z));
@@ -594,12 +587,20 @@ public class SusChunkFinder extends Module {
             if (!seenChunk(cx, cz)) indirectScore.merge(ChunkPos.toLong(cx, cz), entityScore.get(), Integer::sum);
         }
         else if (event.packet instanceof PlaySoundS2CPacket p) {
+            // the landing sound of your own pearl plays where you are about to be, often before that
+            // ground has arrived — it is yours, not somebody in an unseen chunk
+            if (shama.addon.util.SelfActivity.INSTANCE.pearlInFlight()) return;
             int cx = (int) Math.floor(p.getX()) >> 4, cz = (int) Math.floor(p.getZ()) >> 4;
             if (!seenChunk(cx, cz)) indirectScore.merge(ChunkPos.toLong(cx, cz), soundScore.get(), Integer::sum);
         }
         else if (event.packet instanceof ChunkDataS2CPacket p) {
             long now = System.currentTimeMillis();
-            if (now - lastChunkData < 30) indirectScore.merge(ChunkPos.toLong(p.getChunkX(), p.getChunkZ()), 1, Integer::sum);
+            var self = shama.addon.util.SelfActivity.INSTANCE;
+            long key = ChunkPos.toLong(p.getChunkX(), p.getChunkZ());
+            // a burst after your own teleport, or ground resent because you only just left it (render
+            // refreshes do exactly that), is your doing
+            boolean mine = self.teleportedWithin(6000) || self.leftRecently(key, 10 * 60_000L);
+            if (!mine && now - lastChunkData < 30) indirectScore.merge(key, 1, Integer::sum);
             lastChunkData = now;
         }
     }
@@ -751,7 +752,6 @@ public class SusChunkFinder extends Module {
             }
             if (!flag && (vines.get() || caveVines.get())
                     && Boolean.TRUE.equals(longGrowth.get(e.getKey()))) { flag = true; trigger = 1; }
-            if (!flag && inhabitedTime.get() && highInhabited.contains(e.getKey())) { flag = true; trigger = -1; }
             if (!flag && scannerScore.get() && highScanner.contains(e.getKey())) { flag = true; trigger = -1; }
             if (!flag && indirectDetection.get() && indirectScore.getOrDefault(e.getKey(), 0) >= scaled(flagScore, 10)) { flag = true; trigger = -1; }
             if (!flag && suspicionScore.get() && susScored.contains(e.getKey())) { flag = true; trigger = -1; }
@@ -810,7 +810,6 @@ public class SusChunkFinder extends Module {
             }
             if (!matched && (vines.get() || caveVines.get())
                     && Boolean.TRUE.equals(longGrowth.get(e.getKey()))) matched = true;
-            if (!matched && inhabitedTime.get() && highInhabited.contains(e.getKey())) matched = true;
             if (!matched && scannerScore.get() && highScanner.contains(e.getKey())) matched = true;
             if (!matched && indirectDetection.get() && indirectScore.getOrDefault(e.getKey(), 0) >= scaled(flagScore, 10)) matched = true;
             if (matched) n++;

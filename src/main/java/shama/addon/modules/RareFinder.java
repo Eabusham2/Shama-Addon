@@ -28,7 +28,7 @@ public class RareFinder extends Module {
         .name("find-dropped").description("Highlight rare items lying on the ground.").defaultValue(true).build());
     private final Setting<Boolean> findPlaced = sg.add(new BoolSetting.Builder()
         .name("find-placed")
-        .description("Also find rare blocks that have been placed in the world — a beacon someone built, a sponge wall, heads on display, gilded blackstone. These never appear as dropped items, so without this they're invisible.")
+        .description("Also find rare blocks standing in the world — a beacon someone built, a sponge wall, heads on display, a monster spawner, a shulker box left in a hole. These never appear as dropped items, so without this they're invisible. Each loaded chunk is checked once as it arrives, so this costs nothing while you stand still.")
         .defaultValue(true).build());
     private final Setting<Integer> placedRange = sg.add(new IntSetting.Builder()
         .name("placed-range")
@@ -41,34 +41,41 @@ public class RareFinder extends Module {
     private final Setting<Boolean> findFramed = sg.add(new BoolSetting.Builder()
         .name("find-framed").description("Highlight rare items displayed in item frames — people put their best gear on show.").defaultValue(true).build());
     private final Setting<Integer> scanTicks = sg.add(new IntSetting.Builder()
-        .name("scan-ticks").description("Ticks between sweeps for dropped and framed items.")
+        .name("scan-ticks").description("Ticks between sweeps for dropped and framed items. Placed blocks do not use this; they are checked as their chunk arrives and whenever a block in it changes.")
         .defaultValue(20).min(1).max(200).sliderRange(5, 60).build());
 
     private final Setting<List<Item>> items = sg.add(new ItemListSetting.Builder()
-        .name("items")
-        .description("Everything worth flagging — one list for the lot. Anything here is reported whether it is lying on the ground, hanging in an item frame, or placed as a block in the world. Ores are not here on purpose: ore-spotter++ handles those.")
+        .name("rare-items")
+        .description("Everything worth flagging — one list for the lot, and only things that are genuinely hard to come by. Anything here is reported whether it is lying on the ground, hanging in an item frame, or standing as a block in the world. Everyday blocks such as chests, furnaces and anvils are left out on purpose, since every base and village is full of them; ores are left to ore-spotter++.")
         .defaultValue(List.of(
-            Items.DRAGON_EGG, Items.DRAGON_HEAD, Items.WITHER_SKELETON_SKULL, Items.PLAYER_HEAD,
-            Items.SKELETON_SKULL, Items.ZOMBIE_HEAD, Items.CREEPER_HEAD, Items.PIGLIN_HEAD,
-            Items.ELYTRA, Items.NETHER_STAR, Items.HEART_OF_THE_SEA, Items.BEACON, Items.CONDUIT,
-            Items.ENCHANTED_GOLDEN_APPLE, Items.TRIDENT, Items.NETHERITE_INGOT, Items.NETHERITE_SCRAP,
-            Items.NETHERITE_BLOCK, Items.NETHERITE_HELMET, Items.NETHERITE_CHESTPLATE, Items.NETHERITE_LEGGINGS,
-            Items.NETHERITE_BOOTS, Items.NETHERITE_SWORD, Items.NETHERITE_PICKAXE, Items.NETHERITE_AXE,
-            Items.NETHERITE_SHOVEL, Items.NETHERITE_HOE, Items.MUSIC_DISC_PIGSTEP, Items.DISC_FRAGMENT_5,
-            Items.GILDED_BLACKSTONE, Items.SEA_LANTERN, Items.SPONGE, Items.WET_SPONGE, Items.ANCIENT_DEBRIS,
-            Items.ENCHANTING_TABLE, Items.SHULKER_BOX,
-            Items.CHEST, Items.TRAPPED_CHEST, Items.BARREL, Items.ENDER_CHEST, Items.HOPPER,
-            Items.FURNACE, Items.BLAST_FURNACE, Items.SMOKER, Items.BREWING_STAND, Items.ANVIL))
+            // the one-of-a-kind and boss drops
+            Items.DRAGON_EGG, Items.DRAGON_HEAD, Items.ELYTRA, Items.NETHER_STAR, Items.BEACON,
+            Items.CONDUIT, Items.HEART_OF_THE_SEA, Items.ENCHANTED_GOLDEN_APPLE, Items.TRIDENT,
+            Items.MACE, Items.HEAVY_CORE,
+            // every head and skull
+            Items.WITHER_SKELETON_SKULL, Items.SKELETON_SKULL, Items.ZOMBIE_HEAD, Items.CREEPER_HEAD,
+            Items.PIGLIN_HEAD, Items.PLAYER_HEAD,
+            // netherite, the whole set
+            Items.NETHERITE_INGOT, Items.NETHERITE_SCRAP, Items.NETHERITE_BLOCK, Items.NETHERITE_UPGRADE_SMITHING_TEMPLATE,
+            Items.NETHERITE_HELMET, Items.NETHERITE_CHESTPLATE, Items.NETHERITE_LEGGINGS, Items.NETHERITE_BOOTS,
+            Items.NETHERITE_SWORD, Items.NETHERITE_PICKAXE, Items.NETHERITE_AXE, Items.NETHERITE_SHOVEL, Items.NETHERITE_HOE,
+            // rare finds and blocks
+            Items.MUSIC_DISC_PIGSTEP, Items.DISC_FRAGMENT_5, Items.SPONGE, Items.WET_SPONGE, Items.SPAWNER,
+            // shulker boxes, every colour — a box on its own is somebody's stash or kit
+            Items.SHULKER_BOX, Items.WHITE_SHULKER_BOX, Items.ORANGE_SHULKER_BOX, Items.MAGENTA_SHULKER_BOX,
+            Items.LIGHT_BLUE_SHULKER_BOX, Items.YELLOW_SHULKER_BOX, Items.LIME_SHULKER_BOX, Items.PINK_SHULKER_BOX,
+            Items.GRAY_SHULKER_BOX, Items.LIGHT_GRAY_SHULKER_BOX, Items.CYAN_SHULKER_BOX, Items.PURPLE_SHULKER_BOX,
+            Items.BLUE_SHULKER_BOX, Items.BROWN_SHULKER_BOX, Items.GREEN_SHULKER_BOX, Items.RED_SHULKER_BOX,
+            Items.BLACK_SHULKER_BOX))
         .build());
-
 
     private final SettingGroup sgAlert = settings.createGroup("Alerts");
     private final Setting<Boolean> chat = sgAlert.add(new BoolSetting.Builder()
-        .name("chat").description("Log each new rare item in chat.").defaultValue(true).build());
+        .name("chat").description("Log each new find in chat with where it is — dropped, framed and placed alike.").defaultValue(true).build());
     private final Setting<Boolean> popup = sgAlert.add(new BoolSetting.Builder()
-        .name("popup").description("Throw a title on screen when one turns up.").defaultValue(false).build());
+        .name("popup").description("Throw a title on screen when something turns up, whether it is on the ground, in a frame or placed as a block. Several at once share one title.").defaultValue(true).build());
     private final Setting<Boolean> sound = sgAlert.add(new BoolSetting.Builder()
-        .name("sound").description("Play a sound when one turns up.").defaultValue(false).build());
+        .name("sound").description("Play a sound when something turns up, for all three kinds of find.").defaultValue(true).build());
     private final Setting<Double> volume = sgAlert.add(new DoubleSetting.Builder()
         .name("volume").description("How loud that sound is.").defaultValue(2.0).min(0.1).max(10)
         .sliderRange(0.5, 6).decimalPlaces(1).visible(sound::get).build());
@@ -91,25 +98,64 @@ public class RareFinder extends Module {
     private final Setting<Boolean> tracers = sgRender.add(new BoolSetting.Builder()
         .name("tracers").description("Draw a line from you to each find.").defaultValue(false).build());
 
-    /** {x, y, z, 0 = on the ground / 1 = in a frame} */
-    private final List<double[]> found = new ArrayList<>();
+    /** {x, y, z, 0 = on the ground / 1 = in a frame / 2 = placed} — what is drawn this frame. */
+    private volatile List<double[]> found = new ArrayList<>();
     private final java.util.Set<Integer> announced = new java.util.HashSet<>();
     private int tick;
 
+    /** Placed rare blocks per chunk, as packed positions. Filled by the scanner thread. */
+    private final java.util.Map<Long, long[]> placedByChunk = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.Set<Long> placedAnnounced = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    private volatile java.util.Set<Item> rareSet = java.util.Set.of();
+    private int listHash;
+    private java.util.concurrent.ExecutorService scanner;
+    private Object lastWorld;
+
+    /** Finds waiting to be announced together, so a pile or a wall is one alert. */
+    private final List<String> pendingNames = new ArrayList<>();
+    private double[] pendingAt;
+    private long lastAlert;
+
     public RareFinder() {
         super(shama.addon.ShamaAddon.HUNT, "rare-finder++",
-            "Highlights valuable items on the ground or in item frames, and can beam them so you spot them from far off.");
+            "Highlights genuinely rare things — on the ground, in item frames, or placed as blocks — and can beam them so you spot them from far off.");
     }
 
     @Override
-    public void onDeactivate() { found.clear(); announced.clear(); }
+    public void onActivate() {
+        found = new ArrayList<>(); announced.clear(); placedByChunk.clear(); placedAnnounced.clear();
+        pendingNames.clear(); pendingAt = null; listHash = 0; lastWorld = mc.world;
+        scanner = java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
+            Thread t = new Thread(r, "shama-rarefinder");
+            t.setDaemon(true); t.setPriority(Thread.MIN_PRIORITY);
+            return t;
+        });
+    }
 
-    private void alert(String what, double x, double y, double z) {
+    @Override
+    public void onDeactivate() {
+        if (scanner != null) { scanner.shutdownNow(); scanner = null; }
+        found = new ArrayList<>(); announced.clear(); placedByChunk.clear(); placedAnnounced.clear(); pendingNames.clear();
+    }
+
+    /** Collect a find for the next alert. Alerts go out at most every couple of seconds. */
+    private void note(String what, double x, double y, double z) {
         if (chat.get())
             shama.addon.util.Chat.info("[RareFinder] %s at (%.0f, %.0f, %.0f)", what, x, y, z);
+        if (pendingNames.size() < 8) pendingNames.add(what);
+        if (pendingAt == null) pendingAt = new double[]{x, y, z};
+    }
+
+    private void flushAlerts() {
+        if (pendingAt == null) return;
+        long now = System.currentTimeMillis();
+        if (now - lastAlert < 2000) return;
+        lastAlert = now;
+        String what = pendingNames.size() == 1 ? pendingNames.get(0)
+            : pendingNames.get(0) + " and " + (pendingNames.size() - 1) + " more";
         if (popup.get() && mc.inGameHud != null) {
             mc.inGameHud.setTitleTicks(2, 30, 8);
-            mc.inGameHud.setTitle(net.minecraft.text.Text.literal("Rare item")
+            mc.inGameHud.setTitle(net.minecraft.text.Text.literal("Rare find")
                 .formatted(net.minecraft.util.Formatting.GOLD));
             mc.inGameHud.setSubtitle(net.minecraft.text.Text.literal(what)
                 .formatted(net.minecraft.util.Formatting.YELLOW));
@@ -118,61 +164,155 @@ public class RareFinder extends Module {
             mc.world.playSound(mc.player, mc.player.getX(), mc.player.getY(), mc.player.getZ(),
                 net.minecraft.sound.SoundEvents.BLOCK_NOTE_BLOCK_PLING,
                 net.minecraft.sound.SoundCategory.PLAYERS, volume.get().floatValue(), 1.8f);
+        pendingNames.clear();
+        pendingAt = null;
+    }
+
+    // ---------------------------------------------------------------- placed blocks
+
+    private void queue(net.minecraft.world.chunk.WorldChunk chunk) {
+        var s = scanner;
+        if (s == null || s.isShutdown() || !findPlaced.get()) return;
+        final java.util.Set<Item> want = rareSet;
+        try { s.submit(() -> { try { scanPlaced(chunk, want); } catch (Throwable ignored) {} }); }
+        catch (java.util.concurrent.RejectedExecutionException ignored) {}
+    }
+
+    /**
+     * Find rare blocks in one chunk, on the scanner thread. A placed block is matched by the item it
+     * drops, so the one list covers everything. Each section asks its palette first and is skipped if
+     * none of the list is in it, which is nearly every section in the world.
+     */
+    private void scanPlaced(net.minecraft.world.chunk.WorldChunk chunk, java.util.Set<Item> want) {
+        long ck = chunk.getPos().toLong();
+        if (want.isEmpty()) { placedByChunk.remove(ck); return; }
+        java.util.List<Long> hits = new ArrayList<>();
+        int bx = chunk.getPos().getStartX(), bz = chunk.getPos().getStartZ();
+        net.minecraft.world.chunk.ChunkSection[] sections = chunk.getSectionArray();
+        for (int si = 0; si < sections.length; si++) {
+            net.minecraft.world.chunk.ChunkSection sec = sections[si];
+            if (sec == null || sec.isEmpty() || !sec.hasAny(st -> !st.isAir() && want.contains(st.getBlock().asItem()))) continue;
+            int sy = chunk.sectionIndexToCoord(si) << 4;
+            for (int y = 0; y < 16; y++) for (int x = 0; x < 16; x++) for (int z = 0; z < 16; z++) {
+                var st = sec.getBlockState(x, y, z);
+                if (st.isAir() || !want.contains(st.getBlock().asItem())) continue;
+                hits.add(net.minecraft.util.math.BlockPos.asLong(bx + x, sy + y, bz + z));
+            }
+        }
+        if (hits.isEmpty()) { placedByChunk.remove(ck); return; }
+        long[] arr = new long[hits.size()];
+        for (int i = 0; i < arr.length; i++) arr[i] = hits.get(i);
+        placedByChunk.put(ck, arr);
+    }
+
+    private void seedPlaced() {
+        if (mc.world == null || mc.player == null) return;
+        int pcx = mc.player.getBlockX() >> 4, pcz = mc.player.getBlockZ() >> 4;
+        int cr = Math.max(1, (int) Math.ceil(placedRange.get() / 16.0)) + 1;
+        for (int dx = -cr; dx <= cr; dx++) for (int dz = -cr; dz <= cr; dz++) {
+            var ch = mc.world.getChunk(pcx + dx, pcz + dz, net.minecraft.world.chunk.ChunkStatus.FULL, false);
+            if (ch instanceof net.minecraft.world.chunk.WorldChunk wc) queue(wc);
+        }
+    }
+
+    @EventHandler
+    private void onChunkData(meteordevelopment.meteorclient.events.world.ChunkDataEvent event) {
+        if (findPlaced.get() && event.chunk() instanceof net.minecraft.world.chunk.WorldChunk wc) queue(wc);
+    }
+
+    /** A block changing in a chunk that matters gets that chunk looked at again. */
+    @EventHandler
+    private void onBlockChange(meteordevelopment.meteorclient.events.packets.PacketEvent.Receive event) {
+        if (!findPlaced.get() || mc.world == null) return;
+        net.minecraft.util.math.BlockPos pos = null;
+        if (event.packet instanceof net.minecraft.network.packet.s2c.play.BlockUpdateS2CPacket p) {
+            net.minecraft.util.math.BlockPos bp = p.getPos();
+            long ck = net.minecraft.util.math.ChunkPos.toLong(bp.getX() >> 4, bp.getZ() >> 4);
+            boolean rareNow = rareSet.contains(p.getState().getBlock().asItem());
+            if (rareNow || placedByChunk.containsKey(ck)) pos = bp.toImmutable();
+        } else if (event.packet instanceof net.minecraft.network.packet.s2c.play.ChunkDeltaUpdateS2CPacket bulk) {
+            net.minecraft.util.math.BlockPos[] first = new net.minecraft.util.math.BlockPos[1];
+            boolean[] rare = new boolean[1];
+            bulk.visitUpdates((bp, st) -> {
+                if (first[0] == null) first[0] = bp.toImmutable();
+                if (rareSet.contains(st.getBlock().asItem())) rare[0] = true;
+            });
+            if (first[0] != null && (rare[0] || placedByChunk.containsKey(
+                net.minecraft.util.math.ChunkPos.toLong(first[0].getX() >> 4, first[0].getZ() >> 4)))) pos = first[0];
+        }
+        if (pos == null) return;
+        final int cx = pos.getX() >> 4, cz = pos.getZ() >> 4;
+        // the packet is handled after this event, so look a moment later once it is in the world
+        mc.execute(() -> {
+            if (mc.world == null) return;
+            var ch = mc.world.getChunk(cx, cz, net.minecraft.world.chunk.ChunkStatus.FULL, false);
+            if (ch instanceof net.minecraft.world.chunk.WorldChunk wc) queue(wc);
+        });
     }
 
     @EventHandler
     private void onTick(TickEvent.Post event) {
-        if (mc.world == null || (!findDropped.get() && !findFramed.get())) { found.clear(); return; }
+        flushAlerts();
+        if (mc.world == null || mc.player == null) { found = new ArrayList<>(); return; }
+        if (mc.world != lastWorld) { lastWorld = mc.world; placedByChunk.clear(); placedAnnounced.clear(); announced.clear(); listHash = 0; }
+
+        // the list changed (or this is the first tick): rebuild the lookup and look again
+        int h = items.get().hashCode() * 31 + (findPlaced.get() ? 1 : 0);
+        if (h != listHash) {
+            listHash = h;
+            rareSet = new java.util.HashSet<>(items.get());
+            placedByChunk.clear();
+            if (findPlaced.get()) seedPlaced();
+        }
+
+        if (!findDropped.get() && !findFramed.get() && !findPlaced.get()) { found = new ArrayList<>(); return; }
         if (tick++ % Math.max(1, scanTicks.get()) != 0) return;
 
-        found.clear();
+        List<double[]> next = new ArrayList<>();
 
-        // placed rare blocks: walk the loaded chunks around you and match the block against the
-        // same item list, so a placed beacon or a sponge wall counts even though nothing dropped
-        if (findPlaced.get() && mc.player != null) {
-            int r = placedRange.get(), r2 = r * r;
-            int pcx = mc.player.getBlockX() >> 4, pcz = mc.player.getBlockZ() >> 4;
-            int cr = Math.max(1, (int) Math.ceil(r / 16.0));
-            net.minecraft.util.math.BlockPos me = mc.player.getBlockPos();
-            for (int dx = -cr; dx <= cr; dx++) for (int dz = -cr; dz <= cr; dz++) {
-                net.minecraft.world.chunk.Chunk ch = mc.world.getChunk(pcx + dx, pcz + dz,
-                    net.minecraft.world.chunk.ChunkStatus.FULL, false);
-                if (!(ch instanceof net.minecraft.world.chunk.WorldChunk wc)) continue;
-                int bx = wc.getPos().getStartX(), bz = wc.getPos().getStartZ();
-                int bot = Math.max(wc.getBottomY(), me.getY() - r), top = Math.min(wc.getTopYInclusive(), me.getY() + r);
-                net.minecraft.util.math.BlockPos.Mutable m = new net.minecraft.util.math.BlockPos.Mutable();
-                for (int x = 0; x < 16; x++) for (int z = 0; z < 16; z++) for (int y = bot; y <= top; y++) {
-                    var st = wc.getBlockState(m.set(bx + x, y, bz + z));
-                    if (st.isAir()) continue;
-                    // one list drives everything: a placed block is matched by the item it drops,
-                    // so you only ever maintain a single picker
-                    var it = st.getBlock().asItem();
-                    if (it == net.minecraft.item.Items.AIR || !items.get().contains(it)) continue;
-                    if (me.getSquaredDistance(bx + x, y, bz + z) > r2) continue;
-                    found.add(new double[]{bx + x + 0.5, y, bz + z + 0.5, 2});
+        if (findPlaced.get()) {
+            int r = placedRange.get();
+            double r2 = (double) r * r;
+            double px = mc.player.getX(), py = mc.player.getY(), pz = mc.player.getZ();
+            for (long[] arr : placedByChunk.values()) {
+                for (long packed : arr) {
+                    int x = net.minecraft.util.math.BlockPos.unpackLongX(packed);
+                    int y = net.minecraft.util.math.BlockPos.unpackLongY(packed);
+                    int z = net.minecraft.util.math.BlockPos.unpackLongZ(packed);
+                    double dx = x + 0.5 - px, dy = y + 0.5 - py, dz = z + 0.5 - pz;
+                    if (dx * dx + dy * dy + dz * dz > r2) continue;
+                    next.add(new double[]{x + 0.5, y + 0.5, z + 0.5, 2});
+                    if (placedAnnounced.add(packed)) {
+                        var st = mc.world.getBlockState(new net.minecraft.util.math.BlockPos(x, y, z));
+                        note(new net.minecraft.item.ItemStack(st.getBlock().asItem()).getName().getString() + " (placed)", x, y, z);
+                    }
                 }
             }
+            if (placedAnnounced.size() > 100_000) placedAnnounced.clear();
         }
 
         for (Entity e : mc.world.getEntities()) {
             if (findDropped.get() && e instanceof ItemEntity ie) {
-                if (!items.get().contains(ie.getStack().getItem())) continue;
-                found.add(new double[]{e.getX(), e.getY(), e.getZ(), 0});
+                if (!rareSet.contains(ie.getStack().getItem())) continue;
+                next.add(new double[]{e.getX(), e.getY(), e.getZ(), 0});
                 if (announced.add(e.getId()))
-                    alert(ie.getStack().getName().getString(), e.getX(), e.getY(), e.getZ());
+                    note(ie.getStack().getName().getString(), e.getX(), e.getY(), e.getZ());
             } else if (findFramed.get() && e instanceof ItemFrameEntity fr) {
                 // item frames keep what they're displaying in getHeldItemStack
                 var held = fr.getHeldItemStack();
-                if (held.isEmpty() || !items.get().contains(held.getItem())) continue;
-                found.add(new double[]{e.getX(), e.getY(), e.getZ(), 1});
+                if (held.isEmpty() || !rareSet.contains(held.getItem())) continue;
+                next.add(new double[]{e.getX(), e.getY(), e.getZ(), 1});
                 if (announced.add(e.getId()))
-                    alert(held.getName().getString() + " (framed)", e.getX(), e.getY(), e.getZ());
+                    note(held.getName().getString() + " (framed)", e.getX(), e.getY(), e.getZ());
             }
         }
+        if (announced.size() > 50_000) announced.clear();
+        found = next;
     }
 
     @EventHandler
     private void onRender(Render3DEvent event) {
+        List<double[]> found = this.found;
         if (found.isEmpty()) return;
         var cam = meteordevelopment.meteorclient.utils.render.RenderUtils.center;
 
@@ -209,5 +349,5 @@ public class RareFinder extends Module {
     }
 
     @Override
-    public String getInfoString() { return found.isEmpty() ? null : Integer.toString(found.size()); }
+    public String getInfoString() { List<double[]> f = found; return f.isEmpty() ? null : Integer.toString(f.size()); }
 }

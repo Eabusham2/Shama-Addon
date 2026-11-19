@@ -142,7 +142,12 @@ public class LagDetector extends Module {
     @EventHandler
     private void onChunkData(ChunkDataEvent event) {
         long now = System.currentTimeMillis();
-        if (alreadyLoaded.get() && prevChunkAt > 0) {
+        var self = shama.addon.util.SelfActivity.INSTANCE;
+        // after a pearl or teleport of yours everything streams back at once, and ground you only
+        // just left is still in memory because of you — neither is somebody else's area
+        boolean mine = self.teleportedWithin(6000) || self.leftRecently(event.chunk().getPos().toLong(), 10 * 60_000L);
+        if (mine) instantStreak = 0;
+        else if (alreadyLoaded.get() && prevChunkAt > 0) {
             // chunks the server had in memory come back one after another with almost no gap;
             // anything it must read from disk or generate cannot keep that pace up
             if (now - prevChunkAt <= instantMs.get()) {

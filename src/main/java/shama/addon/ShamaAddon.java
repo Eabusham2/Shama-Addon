@@ -133,6 +133,8 @@ public class ShamaAddon extends MeteorAddon {
     @Override
     public void onInitialize() {
         LOG.info("Initializing Shama addon");
+        // shared record of your own pearls, teleports and placements, so detectors never flag you
+        meteordevelopment.meteorclient.MeteorClient.EVENT_BUS.subscribe(shama.addon.util.SelfActivity.INSTANCE);
 
         Modules.get().add(new BlockEntityFinder());
         Modules.get().add(new ChunkFinder());

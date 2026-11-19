@@ -17,15 +17,17 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Player Trace — finds ground somebody else has been keeping alive.
+ * Active Chunk Detector — finds ground somebody else has been keeping alive.
  *
  * A chunk the server has to read from disk or generate takes real time to hand over. One that is
  * already sitting in memory — because a player, a chunk loader or a farm is holding it open — comes
  * back almost instantly. A long run of instant arrivals is therefore a fingerprint of somebody
  * else's presence, and it shows up even when there is nothing to see and nobody in range.
  *
- * Two other tells are checked alongside it: how long the game says players have spent in a chunk,
- * and whether its contents change while nobody visible is nearby.
+ * Alongside it: whether a chunk comes back different from how you left it, in the parts that only
+ * change while a player is near it; whether its plants are grown past what they reach on their own;
+ * and whether its blocks change while nobody visible is nearby. Everything you cause yourself —
+ * pearls, teleports, ground you only just left — is put down to you and never flagged.
  */
 public class ActiveChunkDetector extends Module {
     private final SettingGroup sg = settings.getDefaultGroup();
@@ -74,7 +76,7 @@ public class ActiveChunkDetector extends Module {
 
     private final Setting<Boolean> stateCompare = sgMethods.add(new BoolSetting.Builder()
         .name("state-change")
-        .description("Compare a chunk against how it looked last time and see whether the parts that only move while it is loaded have moved. The clock the game keeps of how long players have spent in a chunk is the main one: it advances while somebody is in range and sits perfectly still otherwise. So if it has gone up between two sightings, a player was there in between. Nothing else can move it, which makes this proof rather than a guess.")
+        .description("Remember each chunk exactly as it was when it left your view, and compare it with how it comes back. Crops, saplings, leaves, grass, vines and the like only change while a player is close enough for the ground to be ticked, so if those have moved while you were away, somebody was there. On servers that hide the ground below a height by filling it in when you are alone, the same comparison catches the moment real ground starts being sent instead — which only happens because someone else is down there.")
         .defaultValue(true).build());
     private final Setting<Integer> minGapSeconds = sgMethods.add(new IntSetting.Builder()
         .name("min-gap")
@@ -82,17 +84,12 @@ public class ActiveChunkDetector extends Module {
         .defaultValue(60).min(5).max(3600).sliderRange(15, 600).visible(stateCompare::get).build());
     private final Setting<Integer> minDrift = sgMethods.add(new IntSetting.Builder()
         .name("min-change")
-        .description("How many seconds the inhabited clock has to gain before it counts. One or two can come from you passing through yourself; more than that means somebody else.")
+        .description("How many growing blocks have to have changed before it counts. A plant at the very edge can still be ticked for a moment after you leave; a handful more than that means somebody else.")
         .defaultValue(3).min(1).max(100).sliderRange(1, 20).visible(stateCompare::get).build());
-
-    private final Setting<Boolean> inhabited = sgMethods.add(new BoolSetting.Builder()
-        .name("total-time-here")
-        .description("Flag chunks the game says players have spent a long time in. It is recorded per chunk and survives after they leave, so it points at where somebody actually lives rather than where they walked.")
-        .defaultValue(true).build());
-    private final Setting<Integer> inhabitedMinutes = sgMethods.add(new IntSetting.Builder()
-        .name("minutes-spent")
-        .description("How many minutes of recorded presence a chunk needs.")
-        .defaultValue(120).min(1).max(6000).sliderRange(10, 600).visible(inhabited::get).build());
+    private final Setting<Integer> hiddenBelow = sgMethods.add(new IntSetting.Builder()
+        .name("hidden-below-y")
+        .description("The height below which a server may be hiding the ground by filling it in solid. A section below this that comes back solid with one or two kinds of block is treated as filled in; one that comes back with real caves and ores is real. A chunk switching from one to the other is the tell.")
+        .defaultValue(0).min(-64).max(320).sliderRange(-64, 64).visible(stateCompare::get).build());
 
     private final Setting<Boolean> quietChanges = sgMethods.add(new BoolSetting.Builder()
         .name("changes-unattended")
@@ -142,10 +139,13 @@ public class ActiveChunkDetector extends Module {
     }
 
     @Override
-    public void onActivate() { traces.clear(); quietCount.clear(); announced.clear(); prevChunkAt = 0; streak = 0; gaps.clear(); snapshots.clear(); }
+    public void onActivate() { traces.clear(); quietCount.clear(); announced.clear(); prevChunkAt = 0; streak = 0; gaps.clear(); leftStates.clear(); }
 
     @Override
-    public void onDeactivate() { traces.clear(); quietCount.clear(); announced.clear(); }
+    public void onDeactivate() {
+        traces.clear(); quietCount.clear(); announced.clear(); leftStates.clear();
+        if (worker != null) { worker.shutdownNow(); worker = null; }
+    }
 
     /** True when this chunk is close enough that YOU are the reason it is live. */
     private boolean minesNotTheirs(long key) {
@@ -164,100 +164,168 @@ public class ActiveChunkDetector extends Module {
         }
     }
 
+    private java.util.concurrent.ExecutorService worker;
+
+    private java.util.concurrent.ExecutorService worker() {
+        if (worker == null || worker.isShutdown()) {
+            worker = java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
+                Thread t = new Thread(r, "shama-activechunk");
+                t.setDaemon(true); t.setPriority(Thread.MIN_PRIORITY);
+                return t;
+            });
+        }
+        return worker;
+    }
+
+    private void offThread(Runnable r) {
+        try { worker().submit(() -> { try { r.run(); } catch (Throwable ignored) {} }); }
+        catch (java.util.concurrent.RejectedExecutionException ignored) {}
+    }
+
     @EventHandler
     private void onChunkData(ChunkDataEvent event) {
         if (!(event.chunk() instanceof WorldChunk chunk)) return;
         long key = chunk.getPos().toLong();
         long now = System.currentTimeMillis();
+        var self = shama.addon.util.SelfActivity.INSTANCE;
 
-        // instant arrivals: the server already had this open for somebody
+        // instant arrivals: the server already had this open for somebody. Not after a pearl or a
+        // teleport of yours, when everything streams back at once, and not ground you only just
+        // left — the server is still holding that because of you.
         if (instantArrival.get()) {
-            if (prevChunkAt > 0) {
-                gaps.addLast(now - prevChunkAt);
-                while (gaps.size() > 200) gaps.pollFirst();
+            if (self.teleportedWithin(6000)) streak = 0;
+            else if (!self.leftRecently(key, 10 * 60_000L)) {
+                if (prevChunkAt > 0) {
+                    gaps.addLast(now - prevChunkAt);
+                    while (gaps.size() > 200) gaps.pollFirst();
+                }
+                if (prevChunkAt > 0 && now - prevChunkAt <= instantCutoff()) {
+                    if (++streak >= instantRun.get()) mark(key, "came back instantly, already loaded");
+                } else streak = 0;
             }
-            if (prevChunkAt > 0 && now - prevChunkAt <= instantCutoff()) {
-                if (++streak >= instantRun.get()) mark(key, "came back instantly, already loaded");
-            } else streak = 0;
         }
         prevChunkAt = now;
 
-        // compare against what this chunk looked like last time we were here
-        if (stateCompare.get()) {
-            long[] now2 = chunkState(chunk);
-            Snapshot old = snapshots.get(key);
-            if (old != null) {
-                long gap = (System.currentTimeMillis() - old.when()) / 1000;
-                long clock = now2[0] - old.state()[0];          // inhabited ticks gained
-                long ents = Math.abs(now2[1] - old.state()[1]);
-                long bes = Math.abs(now2[2] - old.state()[2]);
-
-                if (gap >= minGapSeconds.get()) {
-                    if (clock >= minDrift.get() * 20L) {
-                        // the clock only runs while somebody is in range, so this is not ambiguous
-                        mark(key, "a player has been here for " + (clock / 20) + "s of the last " + gap + "s");
-                    } else if (clock <= 0 && (ents + bes) >= minDrift.get()) {
-                        // the clock did not move but the contents did: loaded from further out
-                        mark(key, "contents changed with the clock still — loaded from out of range");
-                    }
-                }
+        // the reading itself happens on a worker thread; these walk the sections of the chunk
+        boolean compare = stateCompare.get(), growth = tickEvidence.get();
+        if (!compare && !growth) return;
+        final int grownNeeded = grownMin.get();
+        offThread(() -> {
+            if (compare) {
+                State nowState = readState(chunk);
+                State old = leftStates.remove(key);
+                if (old != null) compareStates(key, old, nowState);
             }
-            // keep the map bounded; the oldest entries are the least useful anyway
-            if (snapshots.size() > 20000) snapshots.clear();
-            snapshots.put(key, new Snapshot(now2, System.currentTimeMillis()));
-        }
-
-        // growth: written into the blocks themselves, so it holds up on any server
-        if (tickEvidence.get()) {
-            int grown = 0;
-            int bx = chunk.getPos().getStartX(), bz = chunk.getPos().getStartZ();
-            net.minecraft.util.math.BlockPos.Mutable m = new net.minecraft.util.math.BlockPos.Mutable();
-            outer:
-            for (int x = 0; x < 16; x++) for (int z = 0; z < 16; z++)
-                for (int y = chunk.getBottomY(); y <= chunk.getTopYInclusive(); y++) {
-                    var st = chunk.getBlockState(m.set(bx + x, y, bz + z));
-                    if (st.isAir()) continue;
-                    if (wellGrown(st) && ++grown >= grownMin.get()) {
-                        mark(key, grown + " plants grown past what happens on their own");
-                        break outer;
-                    }
-                }
-        }
-
-        // recorded presence
-        if (inhabited.get()) {
-            try {
-                long ticks = chunk.getInhabitedTime();
-                if (ticks / 20 / 60 >= inhabitedMinutes.get()) mark(key, (ticks / 20 / 60) + " minutes spent here");
-            } catch (Throwable ignored) {}
-        }
+            if (growth) {
+                int grown = countGrown(chunk, grownNeeded);
+                if (grown >= grownNeeded) mark(key, grown + " plants grown past what happens on their own");
+            }
+        });
     }
 
-    /** What a chunk looked like last time, and when. */
-    private record Snapshot(long[] state, long when) {}
-    private final Map<Long, Snapshot> snapshots = new ConcurrentHashMap<>();
+    /** A chunk leaving your view: remember exactly how it was, to compare when it comes back. */
+    @EventHandler
+    private void onUnload(PacketEvent.Receive event) {
+        if (!stateCompare.get() || mc.world == null) return;
+        if (!(event.packet instanceof net.minecraft.network.packet.s2c.play.UnloadChunkS2CPacket p)) return;
+        ChunkPos cp = p.comp_1726();
+        var ch = mc.world.getChunk(cp.x, cp.z, net.minecraft.world.chunk.ChunkStatus.FULL, false);
+        if (!(ch instanceof WorldChunk wc)) return;
+        long key = cp.toLong();
+        // the chunk object stops changing once it is dropped, so reading it a moment later is exact
+        offThread(() -> {
+            if (leftStates.size() > 20000) leftStates.clear();
+            leftStates.put(key, readState(wc));
+        });
+    }
 
     /**
-     * The parts of a chunk's own state that only move while it is loaded.
+     * What a chunk looked like, reduced to the parts that matter.
      *
-     * The inhabited clock is the important one — the game advances it while a player is within
-     * range of the chunk and leaves it completely alone otherwise, so it cannot drift on its own.
-     * Entity and block-entity counts come along as a weaker second opinion, since neither changes
-     * in a chunk nobody is ticking.
+     * growing: how many of each block that only changes when the ground is ticked — crops, saplings,
+     *          leaves, grass, vines, kelp, cane and the rest. They sit still in a chunk nobody is near.
+     * filled:  how many sections below the hiding height came back as a solid fill of one or two
+     *          kinds of block, which natural ground never is.
      */
-    private long[] chunkState(WorldChunk chunk) {
-        long inhabited = 0, entities = 0, blockEntities = 0;
-        try { inhabited = chunk.getInhabitedTime(); } catch (Throwable ignored) {}
-        try { blockEntities = chunk.getBlockEntities().size(); } catch (Throwable ignored) {}
-        try {
-            if (mc.world != null) {
-                int bx = chunk.getPos().getStartX(), bz = chunk.getPos().getStartZ();
-                for (var e : mc.world.getEntities()) {
-                    if (e.getBlockX() >> 4 == chunk.getPos().x && e.getBlockZ() >> 4 == chunk.getPos().z) entities++;
-                }
+    private record State(Map<Integer, Integer> growing, int filled, long when) {}
+    private final Map<Long, State> leftStates = new ConcurrentHashMap<>();
+
+    private State readState(WorldChunk chunk) {
+        Map<Integer, Integer> growing = new java.util.HashMap<>();
+        int filled = 0;
+        int below = hiddenBelow.get();
+        net.minecraft.world.chunk.ChunkSection[] sections = chunk.getSectionArray();
+        for (int si = 0; si < sections.length; si++) {
+            net.minecraft.world.chunk.ChunkSection sec = sections[si];
+            if (sec == null || sec.isEmpty()) continue;
+            int sy = chunk.sectionIndexToCoord(si) << 4;
+            boolean low = sy + 15 < below;
+            boolean ticks = sec.hasRandomBlockTicks();
+            if (!low && !ticks) continue;
+            int[] kinds = {0, 0};                       // distinct solid states, solid blocks
+            sec.getBlockStateContainer().count((st, n) -> {
+                if (st.isAir()) return;
+                kinds[0]++; kinds[1] += n;
+                // amethyst and dripstone are left out: some servers hide those on their own, and
+                // their coming and going would read as growth
+                if (ticks && st.hasRandomTicks() && !isHiddenBySomeServers(st))
+                    growing.merge(net.minecraft.block.Block.getRawIdFromState(st), n, Integer::sum);
+            });
+            if (low && kinds[1] == 4096 && kinds[0] <= 2) filled++;
+        }
+        return new State(growing, filled, System.currentTimeMillis());
+    }
+
+    private static boolean isHiddenBySomeServers(net.minecraft.block.BlockState st) {
+        String p = shama.addon.util.BlockPaths.of(st.getBlock());
+        return p.contains("amethyst") || p.contains("dripstone");
+    }
+
+    private void compareStates(long key, State old, State now) {
+        long gap = (now.when() - old.when()) / 1000;
+        if (gap < minGapSeconds.get()) return;               // you were only just here
+
+        // ground that was filled in when you left and is real now — or the other way round
+        if (old.filled() > 0 && now.filled() == 0) {
+            mark(key, "hidden ground came back real after " + gap + "s — someone else is down there");
+            return;
+        }
+        if (old.filled() == 0 && now.filled() >= 2) {
+            mark(key, "real ground was being sent here and now it is filled in — someone was down there");
+            return;
+        }
+
+        int changed = 0;
+        for (var e : old.growing().entrySet()) changed += Math.abs(e.getValue() - now.growing().getOrDefault(e.getKey(), 0));
+        for (var e : now.growing().entrySet()) if (!old.growing().containsKey(e.getKey())) changed += e.getValue();
+        changed /= 2;                                        // each change moves one block between two states
+        if (changed >= minDrift.get())
+            mark(key, changed + " growing blocks changed in the " + gap + "s you were away");
+    }
+
+    /** How many well-grown plants a chunk holds, stopping once it has enough. */
+    private int countGrown(WorldChunk chunk, int enough) {
+        int grown = 0;
+        net.minecraft.world.chunk.ChunkSection[] sections = chunk.getSectionArray();
+        for (int si = 0; si < sections.length; si++) {
+            net.minecraft.world.chunk.ChunkSection sec = sections[si];
+            if (sec == null || sec.isEmpty() || !sec.hasAny(this::grownCandidate)) continue;
+            for (int y = 0; y < 16; y++) for (int x = 0; x < 16; x++) for (int z = 0; z < 16; z++) {
+                var st = sec.getBlockState(x, y, z);
+                if (!st.isAir() && wellGrown(st) && ++grown >= enough) return grown;
             }
-        } catch (Throwable ignored) {}
-        return new long[]{inhabited, entities, blockEntities};
+        }
+        return grown;
+    }
+
+    /** Cheap first pass for the palette check: could this block type ever count as grown? */
+    private boolean grownCandidate(net.minecraft.block.BlockState st) {
+        if (st.isAir()) return false;
+        return switch (shama.addon.util.BlockPaths.of(st.getBlock())) {
+            case "wheat", "carrots", "potatoes", "beetroots", "nether_wart", "sugar_cane", "cactus", "bamboo",
+                 "kelp", "twisting_vines", "weeping_vines", "pointed_dripstone", "amethyst_cluster", "large_amethyst_bud" -> true;
+            default -> false;
+        };
     }
 
     /** Plants that only reach an advanced stage if something kept ticking the chunk. */

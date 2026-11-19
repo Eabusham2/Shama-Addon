@@ -11,8 +11,6 @@ import meteordevelopment.orbit.EventHandler;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.option.Perspective;
 import net.minecraft.client.util.InputUtil;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
@@ -69,8 +67,13 @@ public class Freecam extends Module {
 
     private final Setting<Boolean> holdToUse = sgGeneral.add(new BoolSetting.Builder()
         .name("hold-to-use")
-        .description("Hold right click to use whatever you are holding, from your real character rather than the camera. This is what lets you keep firing rockets while you fly the camera around, or eat, or draw a bow, without closing the camera first.")
+        .description("Hold right click to use whatever you are holding, from your real character rather than the camera. Held is held, exactly as with the camera closed: food keeps being eaten until it is finished or you let go, a bow keeps drawing, a shield stays up, and rockets keep firing while you fly the camera around.")
         .defaultValue(true).visible(() -> clickAction.get() == Click.RealBody).build());
+
+    private final Setting<Boolean> holdLadders = sgGeneral.add(new BoolSetting.Builder()
+        .name("hold-on-ladders")
+        .description("Keep your character where it is on a ladder, vine or chain of cave vines while the camera is out, instead of sliding down it. Your body gets no keys while you fly the camera, and on a ladder no keys means slipping — this holds sneak for it there, the same thing you would do yourself. If you were climbing when you opened the camera it keeps climbing; scaffolding is left alone, since sneaking on it takes you down.")
+        .defaultValue(true).build());
     private final Setting<Double> smoothing = sgGeneral.add(new DoubleSetting.Builder()
         .name("smoothing").description("How much the camera eases into a start and out of a stop. A little takes the jerkiness off without making it feel like it is floating; 0 is instant, the way Meteor moves.").defaultValue(0.05).min(0).max(0.9).sliderRange(0, 0.5).decimalPlaces(2).build());
     private final Setting<Boolean> lookFly = sgGeneral.add(new BoolSetting.Builder()
@@ -132,9 +135,11 @@ public class Freecam extends Module {
     @Override
     public void onDeactivate() {
         if (mc.options != null) {
+            // hand every key back in the state it is physically in, so whatever you are holding as the
+            // camera closes carries straight on instead of needing to be pressed again
             for (KeyBinding k : new KeyBinding[]{mc.options.forwardKey, mc.options.backKey, mc.options.leftKey,
                 mc.options.rightKey, mc.options.jumpKey, mc.options.sneakKey, mc.options.attackKey, mc.options.useKey}) {
-                k.setPressed(false);
+                k.setPressed(mc.currentScreen == null && phys(k));
             }
             if (prevPerspective != null) mc.options.setPerspective(prevPerspective);
         }
@@ -221,50 +226,71 @@ public class Freecam extends Module {
         mc.options.leftKey.setPressed(sLeft);
         mc.options.rightKey.setPressed(sRight);
         mc.options.jumpKey.setPressed(sJump);
-        mc.options.sneakKey.setPressed(keepSneaking.get() || sSneak);
+        mc.options.sneakKey.setPressed(keepSneaking.get() || sSneak || holdOnLadder());
         mc.player.setSprinting(sSprint);
-        mc.options.attackKey.setPressed(false);
-        mc.options.useKey.setPressed(false);
     }
 
-    private int useCooldown;
+    /** On a ladder or vine with nothing held that would climb it, so it would slide down. */
+    private boolean holdOnLadder() {
+        if (!holdLadders.get() || mc.player == null) return false;
+        if (sForward || sBack || sLeft || sRight || sJump) return false;          // it is climbing; leave it
+        if (!mc.player.isClimbing()) return false;
+        return !mc.player.getBlockStateAtPos().isOf(net.minecraft.block.Blocks.SCAFFOLDING);
+    }
+
+    /** Throw away clicks the game has queued for this button, so they never reach it. */
+    private static void drain(KeyBinding kb) {
+        int guard = 64;
+        while (kb.wasPressed() && guard-- > 0) { /* consumed */ }
+    }
 
     /**
-     * What your character does while the camera is out.
+     * What your character does with the mouse buttons while the camera is out.
      *
-     * Everything here aims from your real body, not the camera, so a click never swings at whatever
-     * happens to be in front of the camera. Each button follows the physical key, so holding is
-     * holding and letting go stops. Right click uses whatever you are holding when nothing is in
-     * reach, which is what lets rockets keep firing while you fly the camera around.
+     * The game already aims clicks from your character, not from the camera: the crosshair target is
+     * worked out from your body's eyes and facing every tick. So the buttons are handed to the game
+     * as they are rather than acted out here, and everything that depends on holding a button keeps
+     * working exactly as it does with the camera closed — eating, drawing a bow, holding a shield,
+     * mining a block through to the end, firing rockets.
+     *
+     * What is held back: a button you have switched off here, and a left click when nothing is in
+     * front of your character, which would otherwise swing at thin air. Queued clicks are thrown
+     * away in those cases too, since the game acts on the click count as well as on the held state.
+     * This runs before the game reads the buttons each tick.
      */
     private void handleActions() {
-        if (mc.interactionManager == null || mc.player == null || mc.currentScreen != null) return;
-        if (useCooldown > 0) useCooldown--;
-
+        if (mc.options == null) return;
+        KeyBinding atk = mc.options.attackKey, use = mc.options.useKey;
+        boolean screen = mc.currentScreen != null;
         boolean real = mineAtCharacter.get() && clickAction.get() == Click.RealBody;
-        boolean mine = (keepInputs.get() && sAttack) || (real && holdToMine.get() && phys(mc.options.attackKey));
-        boolean use  = (keepInputs.get() && sUse)    || (real && holdToUse.get()  && phys(mc.options.useKey));
-        if (!mine && !use) return;
 
-        HitResult hr = mc.player.raycast(4.5, 1.0f, false);
-        BlockHitResult bhr = (hr != null && hr.getType() == HitResult.Type.BLOCK && hr instanceof BlockHitResult b) ? b : null;
+        boolean mineHeld = !screen && ((keepInputs.get() && sAttack) || (real && holdToMine.get() && phys(atk)));
+        boolean useHeld  = !screen && ((keepInputs.get() && sUse)    || (real && holdToUse.get()  && phys(use)));
 
-        if (mine && bhr != null) {
-            mc.interactionManager.updateBlockBreakingProgress(bhr.getBlockPos(), bhr.getSide());
-            mc.player.swingHand(Hand.MAIN_HAND);
-        }
-        if (use && useCooldown == 0) {
-            if (bhr != null) mc.interactionManager.interactBlock(mc.player, Hand.MAIN_HAND, bhr);
-            else mc.interactionManager.interactItem(mc.player, Hand.MAIN_HAND);
-            mc.player.swingHand(Hand.MAIN_HAND);
-            useCooldown = 4;                       // vanilla repeats a held right click every four ticks
-        }
+        HitResult target = mc.crosshairTarget;
+        boolean atAir = target == null || target.getType() == HitResult.Type.MISS;
+
+        if (mineHeld && !atAir) atk.setPressed(true);
+        else { atk.setPressed(false); drain(atk); }
+
+        if (useHeld) use.setPressed(true);
+        else { use.setPressed(false); drain(use); }
     }
 
+    /**
+     * Whether the button bound to this key is physically down right now.
+     *
+     * Mouse buttons have to be asked for as mouse buttons: asking the keyboard about code 0 or 1
+     * always says "not pressed", which is why holding a mouse button in the camera used to do
+     * nothing at all.
+     */
     private boolean phys(KeyBinding kb) {
         try {
-            int code = InputUtil.fromTranslationKey(kb.getBoundKeyTranslationKey()).getCode();
-            return org.lwjgl.glfw.GLFW.glfwGetKey(mc.getWindow().getHandle(), code) == org.lwjgl.glfw.GLFW.GLFW_PRESS;
+            InputUtil.Key key = InputUtil.fromTranslationKey(kb.getBoundKeyTranslationKey());
+            long handle = mc.getWindow().getHandle();
+            if (key.getCategory() == InputUtil.Type.MOUSE)
+                return org.lwjgl.glfw.GLFW.glfwGetMouseButton(handle, key.getCode()) == org.lwjgl.glfw.GLFW.GLFW_PRESS;
+            return org.lwjgl.glfw.GLFW.glfwGetKey(handle, key.getCode()) == org.lwjgl.glfw.GLFW.GLFW_PRESS;
         } catch (Exception e) {
             return kb.isPressed();
         }
