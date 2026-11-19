@@ -237,6 +237,8 @@ public class BlockEntityFinder extends Module {
     }
 
     private void record(BlockPos pos, String name, boolean container, NbtCompound nbt) {
+        // a container, sign or anything else you put down yourself is not a stash you found
+        if (shama.addon.util.SelfActivity.INSTANCE.placedByMe(pos)) return;
         if (spoofDetect.get() && pos.getY() <= spoofY.get()) {
             if (found.put(pos.toImmutable(), name + " (spoofed?)") == null && chatAlert.get())
                 alerts.add(String.format("[BE-Debug] SPOOFED %s at (%d, %d, %d) - hidden stash nearby", name, pos.getX(), pos.getY(), pos.getZ()));

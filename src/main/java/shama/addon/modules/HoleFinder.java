@@ -185,9 +185,12 @@ public class HoleFinder extends Module {
 
         for (int x = 0; x < 16; x++) for (int z = 0; z < 16; z++) {
             for (int y = bottom; y <= top; y++) {
-                if (sealedPockets.get() && y >= pocketMinY.get() && isSealedPocket(chunk, bx + x, y, bz + z, bottom, top))
+                // a pocket you mined out, or a hole you filled in yourself, is yours
+                if (sealedPockets.get() && y >= pocketMinY.get() && isSealedPocket(chunk, bx + x, y, bz + z, bottom, top)
+                    && !shama.addon.util.SelfActivity.INSTANCE.brokenByMe(bx + x, y, bz + z))
                     pockets.add(new int[]{bx + x, y, bz + z});
                 if (!isFillBlock(chunk, bx + x, y, bz + z)) continue;
+                if (shama.addon.util.SelfActivity.INSTANCE.placedByMe(bx + x, y, bz + z)) continue;
 
                 // The block has to be SEALING the shaft, not just sitting inside one that is already
                 // open. If there is air above it, you are looking down an open hole at a block that

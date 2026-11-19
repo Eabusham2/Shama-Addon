@@ -124,6 +124,18 @@ public class TunnelFinder extends Module {
         if (!found.isEmpty()) segments.put(chunk.getPos().toLong(), found);
     }
 
+    /** Half or more of this run was mined out by you this session — it is your own tunnel. */
+    private static boolean dugByMe(int x1, int y, int z1, int x2, int z2) {
+        var self = shama.addon.util.SelfActivity.INSTANCE;
+        int mine = 0, cells = 0;
+        for (int x = Math.min(x1, x2); x <= Math.max(x1, x2); x++)
+            for (int z = Math.min(z1, z2); z <= Math.max(z1, z2); z++) {
+                cells++;
+                if (self.brokenByMe(x, y, z) || self.brokenByMe(x, y + 1, z)) mine++;
+            }
+        return cells > 0 && mine * 2 >= cells;
+    }
+
     private void scanRun(WorldChunk chunk, int cx, int cz, int y, int line, boolean alongX, List<int[]> found, BlockPos.Mutable m) {
         int run = 0, startPos = 0;
         for (int i = 0; i <= 16; i++) {
@@ -158,7 +170,7 @@ public class TunnelFinder extends Module {
                 if (run >= minLength.get()) {
                     int x1 = alongX ? cx + startPos : cx + line, z1 = alongX ? cz + line : cz + startPos;
                     int x2 = alongX ? cx + startPos + run - 1 : cx + line, z2 = alongX ? cz + line : cz + startPos + run - 1;
-                    found.add(new int[]{x1, y, z1, x2, y, z2});
+                    if (!dugByMe(x1, y, z1, x2, z2)) found.add(new int[]{x1, y, z1, x2, y, z2});
                 }
                 run = 0;
             }

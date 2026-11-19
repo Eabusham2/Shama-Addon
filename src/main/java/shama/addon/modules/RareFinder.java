@@ -18,8 +18,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Rare Finder — highlights valuable items lying on the ground or displayed in item frames,
- * with an optional beam so you can spot them from a distance.
+ * Rare Finder — highlights genuinely rare things lying on the ground, displayed in item frames, or
+ * placed as blocks, with an optional beam so you can spot them from a distance. Every kind of find
+ * raises the same chat line, popup and sound.
  */
 public class RareFinder extends Module {
     private final SettingGroup sg = settings.getDefaultGroup();

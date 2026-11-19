@@ -231,6 +231,11 @@ public class AntiAntiEsp extends Module {
 
     private void record(BlockPos pos, Block block, boolean hint, String what) {
         if (!wanted(pos, block)) return;
+        // the server confirming a block you placed is not a hidden block coming to light, and a
+        // sound or particle right where you stand is your own doing
+        var self = shama.addon.util.SelfActivity.INSTANCE;
+        if (self.placedByMe(pos)) return;
+        if (hint && self.near(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 4)) return;
 
         // A recovery only means something when the server described something real in a place your
         // client currently shows as filler. If your client already draws it, nothing was hidden and

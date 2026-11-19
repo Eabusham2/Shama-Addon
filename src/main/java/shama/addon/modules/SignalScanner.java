@@ -55,13 +55,15 @@ public class SignalScanner extends Module {
             ChunkSection s = secs[si];
             if (s == null || s.isEmpty()) continue;
             int baseY = chunk.getBottomY() + (si << 4);
+            // sections never straddle Y 0, so a section is either all underground or none of it
+            boolean lights = lightAnomalies.get() && baseY < 0;
+            // Ask the palette first. A section with no redstone and no light in it — nearly every
+            // section — is skipped without reading its 4096 blocks on the game thread.
+            if (!s.hasAny(st -> isSignal(st.getBlock()) || (lights && st.getLuminance() > 0))) continue;
             for (int y = 0; y < 16; y++) for (int z = 0; z < 16; z++) for (int x = 0; x < 16; x++) {
                 var st = s.getBlockState(x, y, z);
-                String p = shama.addon.util.BlockPaths.of(st.getBlock());
-                if (p.equals("hopper") || p.equals("comparator") || p.equals("repeater") || p.equals("observer")
-                    || p.equals("dropper") || p.equals("dispenser") || p.endsWith("piston") || p.equals("redstone_wire")
-                    || p.equals("redstone_torch") || p.equals("target")) n++;
-                else if (lightAnomalies.get() && baseY + y < 0 && st.getLuminance() > 0) n++; // underground light source
+                if (isSignal(st.getBlock())) n++;
+                else if (lights && st.getLuminance() > 0) n++; // underground light source
             }
         }
         if (hopperEsp.get())
@@ -96,6 +98,18 @@ public class SignalScanner extends Module {
         }
     }
 
+    private static final java.util.Map<net.minecraft.block.Block, Boolean> SIGNAL = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** Redstone, hoppers and the rest of the wiring this counts. Worked out once per block type. */
+    private static boolean isSignal(net.minecraft.block.Block b) {
+        return SIGNAL.computeIfAbsent(b, k -> {
+            String p = shama.addon.util.BlockPaths.of(k);
+            return p.equals("hopper") || p.equals("comparator") || p.equals("repeater") || p.equals("observer")
+                || p.equals("dropper") || p.equals("dispenser") || p.endsWith("piston") || p.equals("redstone_wire")
+                || p.equals("redstone_torch") || p.equals("target");
+        });
+    }
+
     private boolean isConnTarget(net.minecraft.block.Block b) {
         String p = shama.addon.util.BlockPaths.of(b);
         if (connHoppers.get() && p.equals("hopper")) return true;
@@ -116,9 +130,18 @@ public class SignalScanner extends Module {
             var ch = mc.world.getChunk(cx, cz, net.minecraft.world.chunk.ChunkStatus.FULL, false);
             if (!(ch instanceof WorldChunk wc)) continue;
             int bx = wc.getPos().getStartX(), bz = wc.getPos().getStartZ(), found = 0;
-            for (int x = 0; x < 16; x++) for (int z = 0; z < 16; z++) for (int y = wc.getBottomY(); y <= connMaxY.get(); y++) {
-                var st = wc.getBlockState(m.set(bx + x, y, bz + z));
-                if (!st.isAir() && isConnTarget(st.getBlock())) found++;
+            var secs = wc.getSectionArray();
+            for (int si = 0; si < secs.length; si++) {
+                var sec = secs[si];
+                int sy = wc.sectionIndexToCoord(si) << 4;
+                if (sec == null || sec.isEmpty() || sy > connMaxY.get()) continue;
+                // skip sections whose palette holds none of what is being counted
+                if (!sec.hasAny(st -> !st.isAir() && isConnTarget(st.getBlock()))) continue;
+                for (int x = 0; x < 16; x++) for (int z = 0; z < 16; z++)
+                    for (int y = sy; y <= Math.min(sy + 15, connMaxY.get()); y++) {
+                        var st = wc.getBlockState(m.set(bx + x, y, bz + z));
+                        if (!st.isAir() && isConnTarget(st.getBlock())) found++;
+                    }
             }
             long k = ChunkPos.toLong(cx, cz);
             if (found >= connMin.get()) connectedChunks.add(k); else connectedChunks.remove(k);

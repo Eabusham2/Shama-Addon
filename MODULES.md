@@ -179,6 +179,8 @@ Flags chunks emitting heavy particle activity (working bases).
   Also score chunks by player-placed blocks (workstations/storage/farming/lighting), on top of particle activity.
 - `block-scan-interval` — *default `40`, hidden until enabled*  
   Ticks between block-scoring passes.
+- `ignore-near-me` — *default `24`*  
+  Leave out anything within this many blocks of you. Your own furnaces, campfires, portal, brewing and fights all throw particles the server sends you, and the chunk you are standing in is your doing, not a base you found. 0 counts everything.
 - `threshold` — *default `25`*  
   Particle packets in the window to flag a chunk.
 - `window-ticks` — *default `60`*  

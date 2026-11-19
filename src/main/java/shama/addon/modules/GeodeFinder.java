@@ -167,7 +167,7 @@ public class GeodeFinder extends Module {
     private final Setting<Integer> geodeThreshold = sgGeode.add(new IntSetting.Builder()
         .name("geode-threshold")
         .description("How many connected amethyst blocks make a geode worth reporting.")
-        .defaultValue(12).min(1).max(100).sliderRange(4, 40)
+        .defaultValue(12).min(1).max(100).sliderRange(1, 40)
         .visible(useFloodFill::get).build());
     private final Setting<Integer> scanMinY = sgGeode.add(new IntSetting.Builder()
         .name("scan-min-y").description("Lowest height to scan for amethyst.")

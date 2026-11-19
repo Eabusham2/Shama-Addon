@@ -7,6 +7,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
 import net.minecraft.network.packet.c2s.play.PlayerInteractBlockC2SPacket;
 import net.minecraft.network.packet.c2s.play.PlayerInteractItemC2SPacket;
 import net.minecraft.network.packet.s2c.play.GameJoinS2CPacket;
@@ -34,7 +35,8 @@ import java.util.concurrent.ConcurrentHashMap;
  *   - pearls and chorus fruit you used, so the teleport they cause is put down to you
  *   - the chunks you left and when, because the server keeps ground you just walked away from in
  *     memory, and it comes back instantly for that reason alone
- *   - the blocks you placed, and the last block you clicked, so your own containers are yours
+ *   - the blocks you placed and the blocks you broke, so your own fills, tunnels and containers
+ *     are yours, and the last block you clicked, so the container you open is known
  */
 public final class SelfActivity {
     public static final SelfActivity INSTANCE = new SelfActivity();
@@ -52,6 +54,7 @@ public final class SelfActivity {
 
     private final Map<Long, Long> leftAt = new ConcurrentHashMap<>();
     private final Set<Long> placed = ConcurrentHashMap.newKeySet();
+    private final Set<Long> broken = ConcurrentHashMap.newKeySet();
 
     private SelfActivity() {}
 
@@ -67,6 +70,7 @@ public final class SelfActivity {
             havePos = false;
             leftAt.clear();
             placed.clear();
+            broken.clear();
         }
         double x = mc.player.getX(), y = mc.player.getY(), z = mc.player.getZ();
         if (havePos) {
@@ -93,7 +97,14 @@ public final class SelfActivity {
     private void onSend(PacketEvent.Send event) {
         if (mc.player == null) return;
         long now = System.currentTimeMillis();
-        if (event.packet instanceof PlayerInteractItemC2SPacket p) {
+        if (event.packet instanceof PlayerActionC2SPacket p) {
+            // starting counts as well as finishing: an instant break never sends the finish
+            var a = p.getAction();
+            if (a == PlayerActionC2SPacket.Action.START_DESTROY_BLOCK || a == PlayerActionC2SPacket.Action.STOP_DESTROY_BLOCK) {
+                if (broken.size() > MAX_TRACKED) broken.clear();
+                broken.add(p.getPos().asLong());
+            }
+        } else if (event.packet instanceof PlayerInteractItemC2SPacket p) {
             ItemStack s = mc.player.getStackInHand(p.getHand());
             if (s.isOf(Items.ENDER_PEARL)) lastPearlThrow = now;
             else if (s.isOf(Items.CHORUS_FRUIT)) lastChorusUse = now;
@@ -153,6 +164,17 @@ public final class SelfActivity {
 
     /** You placed a block at this spot this session. */
     public boolean placedByMe(BlockPos pos) { return placed.contains(pos.asLong()); }
+    public boolean placedByMe(int x, int y, int z) { return placed.contains(BlockPos.asLong(x, y, z)); }
+
+    /** You broke (or started breaking) the block at this spot this session. */
+    public boolean brokenByMe(int x, int y, int z) { return broken.contains(BlockPos.asLong(x, y, z)); }
+
+    /** You are within this many blocks of the point. */
+    public boolean near(double x, double y, double z, double radius) {
+        if (mc.player == null) return false;
+        double dx = mc.player.getX() - x, dy = mc.player.getY() - y, dz = mc.player.getZ() - z;
+        return dx * dx + dy * dy + dz * dz <= radius * radius;
+    }
 
     /** The block you clicked most recently, if it was within this time; otherwise null. */
     public BlockPos lastClicked(long ms) {

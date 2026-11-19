@@ -27,6 +27,7 @@ public class BaseDetector extends Module {
     private final Setting<Boolean> blockScoring = sg.add(new BoolSetting.Builder().name("block-scoring").description("Also score chunks by player-placed blocks (workstations/storage/farming/lighting), on top of particle activity.").defaultValue(false).build());
     private final Setting<Integer> blockScoreEvery = sg.add(new IntSetting.Builder().name("block-scan-interval").description("Ticks between block-scoring passes.").defaultValue(40).min(10).max(200).sliderRange(20,120).visible(blockScoring::get).build());
     private int blockTick;
+    private final Setting<Integer> ignoreNear = sg.add(new IntSetting.Builder().name("ignore-near-me").description("Leave out anything within this many blocks of you. Your own furnaces, campfires, portal, brewing and fights all throw particles the server sends you, and the chunk you are standing in is your doing, not a base you found. 0 counts everything.").defaultValue(24).range(0, 128).sliderRange(0, 64).build());
     private final Setting<Integer> threshold = sg.add(new IntSetting.Builder().name("threshold").description("Particle packets in the window to flag a chunk.").defaultValue(25).range(3, 200).sliderRange(5, 100).build());
     private final Setting<Integer> windowTicks = sg.add(new IntSetting.Builder().name("window-ticks").description("Length of the counting window, in ticks.").defaultValue(60).range(20, 400).sliderRange(20, 200).build());
     private final Setting<Double> boxY = sg.add(new DoubleSetting.Builder().name("box-y").description("The Y height to draw the box/marker at.").defaultValue(64).min(-64).max(320).sliderRange(-64, 320).build());
@@ -42,6 +43,7 @@ public class BaseDetector extends Module {
     @EventHandler
     private void onPacket(PacketEvent.Receive event) {
         if (!(event.packet instanceof ParticleS2CPacket p)) return;
+        if (ignoreNear.get() > 0 && shama.addon.util.SelfActivity.INSTANCE.near(p.getX(), p.getY(), p.getZ(), ignoreNear.get())) return;
         long key = new ChunkPos((int) Math.floor(p.getX()) >> 4, (int) Math.floor(p.getZ()) >> 4).toLong();
         int weight = 1;
         if (weighted.get()) {
@@ -75,22 +77,36 @@ public class BaseDetector extends Module {
         }
     }
 
+    /** How base-like one block is. Worked out once per block type. */
+    private static final Map<net.minecraft.block.Block, Integer> WEIGHT = new ConcurrentHashMap<>();
+
+    private static int blockWeight(net.minecraft.block.BlockState st) {
+        if (st.isAir()) return 0;
+        return WEIGHT.computeIfAbsent(st.getBlock(), b -> {
+            String pth = shama.addon.util.BlockPaths.of(b);
+            if (pth.equals("crafting_table") || pth.endsWith("furnace") || pth.equals("smoker") || pth.equals("anvil") || pth.equals("enchanting_table") || pth.equals("brewing_stand") || pth.equals("smithing_table") || pth.equals("grindstone") || pth.equals("loom") || pth.equals("cartography_table") || pth.equals("stonecutter")) return 5;
+            if (pth.equals("chest") || pth.equals("trapped_chest") || pth.equals("barrel") || pth.endsWith("shulker_box") || pth.equals("hopper") || pth.equals("ender_chest") || pth.equals("dispenser") || pth.equals("dropper")) return 4;
+            if (pth.equals("farmland") || pth.equals("composter") || pth.equals("beehive") || pth.equals("bee_nest") || pth.equals("hay_block")) return 3;
+            if (pth.equals("torch") || pth.equals("wall_torch") || pth.equals("lantern") || pth.equals("glowstone") || pth.equals("sea_lantern") || pth.equals("shroomlight")) return 2;
+            return 0;
+        });
+    }
+
     private void blockScorePass() {
         int r = mc.options.getViewDistance().getValue();
         var center = mc.player.getChunkPos();
         for (int cx = center.x - r; cx <= center.x + r; cx++) for (int cz = center.z - r; cz <= center.z + r; cz++) {
             var ch = mc.world.getChunk(cx, cz, net.minecraft.world.chunk.ChunkStatus.FULL, false);
             if (!(ch instanceof net.minecraft.world.chunk.WorldChunk wc)) continue;
+            // the chunk you are in is your base, not one you found
+            if (ignoreNear.get() > 0 && shama.addon.util.SelfActivity.INSTANCE.near(cx * 16 + 8, mc.player.getY(), cz * 16 + 8, ignoreNear.get())) continue;
             int score = 0;
             for (var sec : wc.getSectionArray()) {
-                if (sec == null || sec.isEmpty()) continue;
+                // sections whose palette holds none of these are skipped unread — nearly all of them
+                if (sec == null || sec.isEmpty() || !sec.hasAny(st -> blockWeight(st) > 0)) continue;
                 for (int y = 0; y < 16; y++) for (int x = 0; x < 16; x++) for (int z = 0; z < 16; z++) {
                     var st = sec.getBlockState(x, y, z); if (st.isAir()) continue;
-                    String pth = shama.addon.util.BlockPaths.of(st.getBlock());
-                    if (pth.equals("crafting_table") || pth.endsWith("furnace") || pth.equals("smoker") || pth.equals("anvil") || pth.equals("enchanting_table") || pth.equals("brewing_stand") || pth.equals("smithing_table") || pth.equals("grindstone") || pth.equals("loom") || pth.equals("cartography_table") || pth.equals("stonecutter")) score += 5;
-                    else if (pth.equals("chest") || pth.equals("trapped_chest") || pth.equals("barrel") || pth.endsWith("shulker_box") || pth.equals("hopper") || pth.equals("ender_chest") || pth.equals("dispenser") || pth.equals("dropper")) score += 4;
-                    else if (pth.equals("farmland") || pth.equals("composter") || pth.equals("beehive") || pth.equals("bee_nest") || pth.equals("hay_block")) score += 3;
-                    else if (pth.equals("torch") || pth.equals("wall_torch") || pth.equals("lantern") || pth.equals("glowstone") || pth.equals("sea_lantern") || pth.equals("shroomlight")) score += 2;
+                    score += blockWeight(st);
                 }
             }
             if (score > 0) counts.merge(net.minecraft.util.math.ChunkPos.toLong(cx, cz), score, Integer::sum);
