@@ -85,6 +85,15 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+      # The release action never moves a tag that already exists, so without this the Latest build
+      # page would carry a fresh jar but source downloads and a commit link from the first build.
+      # Tags that are not v* do not start this workflow, so moving it does not loop.
+      - name: Point the latest tag at this commit
+        if: github.ref == 'refs/heads/main'
+        run: |
+          git tag -f latest "$GITHUB_SHA"
+          git push -f origin refs/tags/latest
+
       # Only reached when precheck and the build both passed, so a release is always a green build.
       - name: Publish the latest build
         if: github.ref == 'refs/heads/main'
