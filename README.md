@@ -274,3 +274,12 @@ useful part.
 
 **GPL-3.0-or-later.** Meteor Client is GPL-3.0 and that licence is copyleft, so anything built
 against it carries the same terms: use it, change it, share it, but keep it open. See [LICENSE](LICENSE).
+
+## Search keywords (ignore)
+
+`shama-addon`, `minecraft`, `minecraft-java`, `minecraft-1-21-11`, `fabric`, `fabric-mod`,
+`meteor-client`, `meteor-addon`, `client-side`, `java`, `gradle`, `base-finder`,
+`stash-finder`, `chunk-detection`, `block-entities`, `particle-esp`, `ore-highlighting`, `geode-finder`,
+`stronghold-finder`, `tunnel-finder`, `redstone-detection`, `search-map`, `combat-modules`, `movement-modules`,
+`elytra`, `freecam`, `inventory-tools`, `schematic-building`, `litematica`, `packet-logger`,
+`lag-detection`, `hud`
