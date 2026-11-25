@@ -1,6 +1,6 @@
 # Module reference
 
-Every one of the **96 modules**, what it is for, and what each of its settings does.
+Every one of the **97 modules**, what it is for, and what each of its settings does.
 
 Settings marked *(hidden until enabled)* only appear once the option above them is switched on, so the menu stays short until you need the detail. Anything named **(risky)** fabricates movement, rotation or timing you did not actually perform — those are off by default and can get you rubber-banded or kicked.
 
@@ -2273,6 +2273,78 @@ Move faster than normal. How much you can get away with depends on the server's 
   Only boost while on the ground (less obvious, fewer anti-cheat flags than air-speed).
 - `sprint-only` — *default `false`*  
   Only boost while you're sprinting.
+
+
+### travel++
+
+Baritone takes you to a position — straight there, or through the Nether along the highways, mining through or digging the highway out as it goes.
+
+**Modes** — Overworld, Nether
+
+**Modes** — Auto, Overland, ThroughNether
+
+**General**
+
+- `x` — *default `0`*  
+  Where you are going: X. Set it here or with .travel <x> <z>.
+- `z` — *default `0`*  
+  Where you are going: Z.
+- `use-y` — *default `false`*  
+  Arrive at an exact height as well. Off, any height in that column counts as arrived.
+- `y` — *default `64`, hidden until enabled*  
+  Where you are going: Y, when use-y is on.
+- `coords-in` — *default `Coords.Overworld`*  
+  Which dimension the position is written in. Overworld coordinates are reached through the Nether at an eighth of their size; Nether coordinates are where the trip ends.
+
+**Route**
+
+- `route` — *default `Route.Auto`*  
+  How an overworld trip gets there. Overland walks the whole way. Through-nether goes in at the nearest portal and out at one near the destination. Auto goes through the Nether when the trip is longer than nether-above. Starting in the Nether, the trip always stays in it until the end.
+- `nether-above` — *default `1000`, hidden until enabled*  
+  With route on Auto, overworld trips longer than this many blocks go through the Nether.
+- `portal-search` — *default `256`*  
+  How far around you to look for a nether portal to go in by, in blocks. If none is loaded that close, Baritone heads for the nearest one it remembers seeing.
+- `exit-radius` — *default `96`*  
+  How far from the Nether end of the trip a portal may be and still be used to come out. With none that close it stops and tells you where you are, so you can build one; walk into it and the trip carries on.
+
+**Highways**
+
+- `use-highways` — *default `true`*  
+  In the Nether, travel along the highways rather than in a straight line: on at the spot nearest you, along, and off nearest the destination — changing highways at 0, 0 when that is shorter.
+- `diagonals` — *default `true`, hidden until enabled*  
+  Use the four diagonal highways as well as the four on the axes.
+- `highway-y` — *default `120`, hidden until enabled*  
+  The height you walk at on the highways: your feet, not the floor. 120 is the usual height for dug Nether highways; check what your server uses.
+- `highway-min` — *default `500`, hidden until enabled*  
+  Nether trips shorter than this many blocks go straight there; getting on and off a highway is not worth it for a short hop.
+- `highway-preference` — *default `2.0`, hidden until enabled*  
+  How much a block walked off the highways counts against one walked on them. At 1 the shortest way wins even if it barely uses a highway. At 2 a block of open Nether is worth two of highway, which keeps you on the highways unless they really are the long way round.
+- `waypoint-gap` — *default `64`, hidden until enabled*  
+  How far apart the points Baritone is sent to along a highway are. Closer keeps it on the highway; further lets it plan longer stretches at once.
+
+**Mining**
+
+- `mine-through` — *default `true`*  
+  Let Baritone break blocks in its way. Off, it only walks where it can already walk.
+- `pillar-and-bridge` — *default `true`*  
+  Let Baritone place throwaway blocks from your inventory to climb up or cross gaps. Getting up to highway height in the Nether usually needs it.
+- `highway-mine` — *default `false`, hidden until enabled*  
+  Dig the highway tunnel out as you go: every stretch is mined to the full width and height below before you walk it, rather than Baritone opening only a one-by-two path for itself. Slower, and it uses up your pickaxe; it leaves a proper highway behind you.
+- `tunnel-width` — *default `3`, hidden until enabled*  
+  How wide the dug highway is, centred on the highway's line. Diagonal tunnels are always at least two wide, or you could not walk them.
+- `tunnel-height` — *default `3`, hidden until enabled*  
+  How tall the dug highway is, from your feet up.
+
+**Behaviour**
+
+- `smooth-turning` — *default `true`*  
+  Have Baritone turn your head gradually rather than snapping to each new direction.
+- `stop-on-arrival` — *default `true`*  
+  Switch this module off once you get there.
+- `sound` — *default `true`*  
+  Chime when you arrive, and when the trip needs you to do something.
+- `stuck-after` — *default `45`*  
+  Seconds without real progress before the current goal is handed to Baritone again. After three tries without progress a point on the way is skipped; the destination itself is never skipped — the trip stops and tells you instead.
 
 
 ### trident-boost++

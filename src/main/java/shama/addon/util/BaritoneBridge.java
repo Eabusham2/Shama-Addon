@@ -56,6 +56,83 @@ public final class BaritoneBridge {
         } catch (Throwable ignored) {}
     }
 
+    // ------------------------------------------------------------------ travel
+
+    /** Walk to a column, any height. */
+    public static boolean goXZ(int x, int z) {
+        try { baritone().getCustomGoalProcess().setGoalAndPath(new baritone.api.pathing.goals.GoalXZ(x, z)); return true; }
+        catch (Throwable t) { return false; }
+    }
+
+    /** Walk until your feet are in this exact block. */
+    public static boolean goBlock(int x, int y, int z) {
+        try { baritone().getCustomGoalProcess().setGoalAndPath(new baritone.api.pathing.goals.GoalBlock(x, y, z)); return true; }
+        catch (Throwable t) { return false; }
+    }
+
+    /** Head for the nearest block of this kind Baritone knows about, loaded or remembered. */
+    public static boolean goToNearest(net.minecraft.block.Block block) {
+        try { baritone().getGetToBlockProcess().getToBlock(block); return true; }
+        catch (Throwable t) { return false; }
+    }
+
+    /** Mine out everything between two corners. */
+    public static boolean clearArea(BlockPos a, BlockPos b) {
+        try { baritone().getBuilderProcess().clearArea(a, b); return true; }
+        catch (Throwable t) { return false; }
+    }
+
+    /** Whether any of the travel jobs handed out here is still being worked on. */
+    public static boolean busy() {
+        try {
+            var b = baritone();
+            return b.getCustomGoalProcess().isActive() || b.getGetToBlockProcess().isActive()
+                || b.getBuilderProcess().isActive() || b.getPathingBehavior().isPathing();
+        } catch (Throwable t) { return false; }
+    }
+
+    public static boolean clearing() {
+        try { return baritone().getBuilderProcess().isActive(); }
+        catch (Throwable t) { return false; }
+    }
+
+    /** Settings changed for a trip, as they were before, by name. */
+    private static final java.util.Map<String, Object> travelSaved = new java.util.HashMap<>();
+
+    @SuppressWarnings("unchecked")
+    private static <T> void setSaving(baritone.api.Settings.Setting<T> s, String key, T value) {
+        if (!travelSaved.containsKey(key)) travelSaved.put(key, s.value);
+        s.value = value;
+    }
+
+    /**
+     * Set Baritone up for a trip: whether it may break blocks in its way, place blocks to pillar or
+     * bridge, walk into the portal it was sent to, and turn smoothly. The old values are kept.
+     */
+    public static void travelSettings(boolean breakBlocks, boolean place, boolean smoothLook) {
+        try {
+            var s = BaritoneAPI.getSettings();
+            setSaving(s.allowBreak, "allowBreak", breakBlocks);
+            setSaving(s.allowPlace, "allowPlace", place);
+            setSaving(s.enterPortal, "enterPortal", true);
+            setSaving(s.smoothLook, "smoothLook", smoothLook);
+        } catch (Throwable ignored) {}
+    }
+
+    /** Put back everything travelSettings changed. Safe to call when nothing was changed. */
+    @SuppressWarnings("unchecked")
+    public static void restoreTravel() {
+        if (travelSaved.isEmpty()) return;
+        try {
+            var s = BaritoneAPI.getSettings();
+            if (travelSaved.containsKey("allowBreak")) s.allowBreak.value = (Boolean) travelSaved.get("allowBreak");
+            if (travelSaved.containsKey("allowPlace")) s.allowPlace.value = (Boolean) travelSaved.get("allowPlace");
+            if (travelSaved.containsKey("enterPortal")) s.enterPortal.value = (Boolean) travelSaved.get("enterPortal");
+            if (travelSaved.containsKey("smoothLook")) s.smoothLook.value = (Boolean) travelSaved.get("smoothLook");
+        } catch (Throwable ignored) {}
+        travelSaved.clear();
+    }
+
     /** Put Baritone's settings back the way they were. Safe to call when nothing was changed. */
     public static void restore() {
         if (savedBreak == null) return;

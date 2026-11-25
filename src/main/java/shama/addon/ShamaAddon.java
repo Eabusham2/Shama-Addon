@@ -10,6 +10,8 @@ import net.minecraft.item.Items;
 import org.slf4j.Logger;
 
 import shama.addon.modules.BlockEntityFinder;
+import shama.addon.modules.Travel;
+import shama.addon.commands.TravelCommand;
 import shama.addon.modules.Autoer;
 import shama.addon.modules.ChunkFinder;
 import shama.addon.modules.Miner;
@@ -170,6 +172,7 @@ public class ShamaAddon extends MeteorAddon {
         Modules.get().add(new ClickTP());
         Modules.get().add(new TridentBoost());
         Modules.get().add(new SchematicBuilder());
+        Modules.get().add(new Travel());
         Modules.get().add(new SearchMap());
         Modules.get().add(new SignalScanner());
         Modules.get().add(new LogoutSpots());
@@ -240,6 +243,7 @@ public class ShamaAddon extends MeteorAddon {
 
         Commands.add(new NbtCommand());
         Commands.add(new BnbtCommand());
+        Commands.add(new TravelCommand());
     }
 
     @Override

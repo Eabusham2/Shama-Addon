@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <b>96 modules for Meteor Client</b>, built around finding what other people have hidden —<br>
+  <b>97 modules for Meteor Client</b>, built around finding what other people have hidden —<br>
   bases, stashes, farms and players — with a full set of combat, movement and utility modules alongside.
 </p>
 
@@ -35,13 +35,13 @@ published unless the build passes, so a broken commit cannot become a download.
 |---|---:|---|
 | [Finding bases, stashes & players](#finding-bases-stashes--players) | 34 | Bases, stashes, farms and players — found from chunk data, packets, block patterns and timing. |
 | [Combat](#combat) | 14 | Crystals, bows, auras and self-defence. |
-| [Movement](#movement) | 13 | Flight, elytra, freecam and movement helpers. |
+| [Movement](#movement) | 14 | Flight, elytra, freecam, Baritone travel and movement helpers. |
 | [Player](#player) | 18 | Mining, inventory and interaction with the world. |
 | [Misc](#misc) | 17 | Rendering, chat, HUD, timing and utilities. |
-| **Total** | **96** | |
+| **Total** | **97** | |
 
 Every module has settings, and every setting explains itself when you hover over it in-game.
-➡ **[MODULES.md](MODULES.md)** is the full write-up: all 96 modules, every setting, its
+➡ **[MODULES.md](MODULES.md)** is the full write-up: all 97 modules, every setting, its
 default, and every mode.
 
 ### What "(risky)" means
@@ -137,10 +137,10 @@ what the server already sent you.
 
 ### Movement
 
-*Flight, elytra, freecam and movement helpers.*
+*Flight, elytra, freecam, Baritone travel and movement helpers.*
 
 <details>
-<summary><b>13 modules</b> — click to expand</summary>
+<summary><b>14 modules</b> — click to expand</summary>
 
 - **auto-wasp++** — Auto-fly pursuit that holds an offset over the nearest target.
 - **click-tp++** — Blink forward along your look. Bind a key and tap it.
@@ -154,6 +154,7 @@ what the server already sent you.
 - **reverse-step++** — Fall down small ledges instantly.
 - **snap-tap++** — When you hold two opposite movement keys at once, the most recently pressed one wins instead of both cancelling out.
 - **speed++** — Move faster than normal. How much you can get away with depends on the server's anti-cheat.
+- **travel++** — Baritone takes you to a position — straight there, or through the Nether along the highways, mining through or digging the highway out as it goes. Start a trip with `.travel <x> <z>` (or `<x> <y> <z>`, optionally followed by `nether` or `overworld`); `.travel stop` ends it.
 - **trident-boost++** — Riptide-launch in any conditions with a trident.
 
 </details>
@@ -219,7 +220,7 @@ what the server already sent you.
 
 For searching the page with a single find:
 
-`active-chunk-detector++, anomaly-scan++, anti-anti-esp++, base-detector++, block-entity-debug++, break-indicators++, chunk-finder++, chunk-loader++, deep-activity++, find-log++, geode-finder++, hidden-player-detect++, hole-finder++, hopper-debug++, light-debug++, loaded-region-finder++, logout-spots++, ocean-monument-finder++, ore-sim++, ore-spotter++, particle-esp++, player-detector++, rare-finder++, region-map++, rtp-finder++, search-map++, signal-scanner++, spawn-cluster-finder++, spawner-finder++, staff-detector++, stronghold-finder++, sus-chunk-finder++, tunnel-finder++, voice-chat-sniffer++, attribute-swap++, auto-city++, auto-log++, bombaura++, bow-aimbot++, combat-extras++, combat-macros++, crystal-aura++, crystal-optim++, fast-bow++, godmode++, hit-particles++, self-defense++, wallbang++, auto-wasp++, click-tp++, elytra-fly++, fast-climb++, flight++, freecam++, jumps++, movement-extras++, noclip++, reverse-step++, snap-tap++, speed++, trident-boost++, auto-sign++, autoer++, chunk-reloader++, home-utils++, instant-mine++, invisibility++, miner++, nbt-adder++, no-break-delay++, no-cooldown++, portal-inv++, reach++, render-method++, schematic-builder++, swing-speed++, timer++, world-extras++, y-level-spoof++, anti-afk++, book-bot++, bypass++, camera-tweaks++, chat-extras++, fake-visuals++, force-commands++, hide-chat++, hostile-esp++, item-highlight++, lag-detector++, notifiers++, packet-logger++, ping-spoofer++, swarm++, time-changer++, trail++`
+`active-chunk-detector++, anomaly-scan++, anti-anti-esp++, base-detector++, block-entity-debug++, break-indicators++, chunk-finder++, chunk-loader++, deep-activity++, find-log++, geode-finder++, hidden-player-detect++, hole-finder++, hopper-debug++, light-debug++, loaded-region-finder++, logout-spots++, ocean-monument-finder++, ore-sim++, ore-spotter++, particle-esp++, player-detector++, rare-finder++, region-map++, rtp-finder++, search-map++, signal-scanner++, spawn-cluster-finder++, spawner-finder++, staff-detector++, stronghold-finder++, sus-chunk-finder++, tunnel-finder++, voice-chat-sniffer++, attribute-swap++, auto-city++, auto-log++, bombaura++, bow-aimbot++, combat-extras++, combat-macros++, crystal-aura++, crystal-optim++, fast-bow++, godmode++, hit-particles++, self-defense++, wallbang++, auto-wasp++, click-tp++, elytra-fly++, fast-climb++, flight++, freecam++, jumps++, movement-extras++, noclip++, reverse-step++, snap-tap++, speed++, travel++, trident-boost++, auto-sign++, autoer++, chunk-reloader++, home-utils++, instant-mine++, invisibility++, miner++, nbt-adder++, no-break-delay++, no-cooldown++, portal-inv++, reach++, render-method++, schematic-builder++, swing-speed++, timer++, world-extras++, y-level-spoof++, anti-afk++, book-bot++, bypass++, camera-tweaks++, chat-extras++, fake-visuals++, force-commands++, hide-chat++, hostile-esp++, item-highlight++, lag-detector++, notifiers++, packet-logger++, ping-spoofer++, swarm++, time-changer++, trail++`
 
 ---
 
@@ -282,4 +283,4 @@ against it carries the same terms: use it, change it, share it, but keep it open
 `stash-finder`, `chunk-detection`, `block-entities`, `particle-esp`, `ore-highlighting`, `geode-finder`,
 `stronghold-finder`, `tunnel-finder`, `redstone-detection`, `search-map`, `combat-modules`, `movement-modules`,
 `elytra`, `freecam`, `inventory-tools`, `schematic-building`, `litematica`, `packet-logger`,
-`lag-detection`, `hud`
+`lag-detection`, `hud`, `baritone`, `nether-travel`, `nether-highways`, `highway-mining`
