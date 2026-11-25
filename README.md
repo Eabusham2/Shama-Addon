@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <b>97 modules for Meteor Client</b>, built around finding what other people have hidden —<br>
+  <b>98 modules for Meteor Client</b>, built around finding what other people have hidden —<br>
   bases, stashes, farms and players — with a full set of combat, movement and utility modules alongside.
 </p>
 
@@ -33,15 +33,15 @@ published unless the build passes, so a broken commit cannot become a download.
 
 | Category | Modules | What it covers |
 |---|---:|---|
-| [Finding bases, stashes & players](#finding-bases-stashes--players) | 34 | Bases, stashes, farms and players — found from chunk data, packets, block patterns and timing. |
+| [Finding bases, stashes & players](#finding-bases-stashes--players) | 35 | Bases, stashes, farms and players — found from chunk data, packets, sounds, block patterns and timing. |
 | [Combat](#combat) | 14 | Crystals, bows, auras and self-defence. |
 | [Movement](#movement) | 14 | Flight, elytra, freecam, Baritone travel and movement helpers. |
 | [Player](#player) | 18 | Mining, inventory and interaction with the world. |
 | [Misc](#misc) | 17 | Rendering, chat, HUD, timing and utilities. |
-| **Total** | **97** | |
+| **Total** | **98** | |
 
 Every module has settings, and every setting explains itself when you hover over it in-game.
-➡ **[MODULES.md](MODULES.md)** is the full write-up: all 97 modules, every setting, its
+➡ **[MODULES.md](MODULES.md)** is the full write-up: all 98 modules, every setting, its
 default, and every mode.
 
 ### What "(risky)" means
@@ -69,10 +69,10 @@ what the server already sent you.
 
 ### Finding bases, stashes & players
 
-*Bases, stashes, farms and players — found from chunk data, packets, block patterns and timing.*
+*Bases, stashes, farms and players — found from chunk data, packets, sounds, block patterns and timing.*
 
 <details>
-<summary><b>34 modules</b> — click to expand</summary>
+<summary><b>35 modules</b> — click to expand</summary>
 
 - **active-chunk-detector++** — Tells a chunk somebody is holding open from one nobody has touched, by reading the parts of its state that only move while a player is near it.
 - **anomaly-scan++** — Learns what ordinary ground looks like on this server, then flags the chunks that do not match — finds builds made from plain terrain that block lists never catch.
@@ -101,6 +101,7 @@ what the server already sent you.
 - **rtp-finder++** — Teleports around with /rtp hunting for rare loot, marks anything it finds with a beacon, and stops itself once it does.
 - **search-map++** — Remembers which ground you have already swept and points you at the ground you have not, so you stop covering the same area twice.
 - **signal-scanner++** — Hunts for the redstone and wiring signatures that give away hidden bases and farms.
+- **sound-detector++** — Marks where sounds come from — chests, furnaces, pistons, villagers, players, totems, mining and whatever else you pick — with a box and a full-height column, so bases and hidden players give themselves away. You choose the blocks, entities and items to listen for; range is in chunks (4 by default), at every height.
 - **spawn-cluster-finder++** — Boxes chunks with unusually dense live hostile-mob counts.
 - **spawner-finder++** — Highlights mob and trial spawners through terrain, at any height.
 - **staff-detector++** — Alerts (popup/chat/sound) when likely staff go online or offline.
@@ -220,7 +221,7 @@ what the server already sent you.
 
 For searching the page with a single find:
 
-`active-chunk-detector++, anomaly-scan++, anti-anti-esp++, base-detector++, block-entity-debug++, break-indicators++, chunk-finder++, chunk-loader++, deep-activity++, find-log++, geode-finder++, hidden-player-detect++, hole-finder++, hopper-debug++, light-debug++, loaded-region-finder++, logout-spots++, ocean-monument-finder++, ore-sim++, ore-spotter++, particle-esp++, player-detector++, rare-finder++, region-map++, rtp-finder++, search-map++, signal-scanner++, spawn-cluster-finder++, spawner-finder++, staff-detector++, stronghold-finder++, sus-chunk-finder++, tunnel-finder++, voice-chat-sniffer++, attribute-swap++, auto-city++, auto-log++, bombaura++, bow-aimbot++, combat-extras++, combat-macros++, crystal-aura++, crystal-optim++, fast-bow++, godmode++, hit-particles++, self-defense++, wallbang++, auto-wasp++, click-tp++, elytra-fly++, fast-climb++, flight++, freecam++, jumps++, movement-extras++, noclip++, reverse-step++, snap-tap++, speed++, travel++, trident-boost++, auto-sign++, autoer++, chunk-reloader++, home-utils++, instant-mine++, invisibility++, miner++, nbt-adder++, no-break-delay++, no-cooldown++, portal-inv++, reach++, render-method++, schematic-builder++, swing-speed++, timer++, world-extras++, y-level-spoof++, anti-afk++, book-bot++, bypass++, camera-tweaks++, chat-extras++, fake-visuals++, force-commands++, hide-chat++, hostile-esp++, item-highlight++, lag-detector++, notifiers++, packet-logger++, ping-spoofer++, swarm++, time-changer++, trail++`
+`active-chunk-detector++, anomaly-scan++, anti-anti-esp++, base-detector++, block-entity-debug++, break-indicators++, chunk-finder++, chunk-loader++, deep-activity++, find-log++, geode-finder++, hidden-player-detect++, hole-finder++, hopper-debug++, light-debug++, loaded-region-finder++, logout-spots++, ocean-monument-finder++, ore-sim++, ore-spotter++, particle-esp++, player-detector++, rare-finder++, region-map++, rtp-finder++, search-map++, signal-scanner++, sound-detector++, spawn-cluster-finder++, spawner-finder++, staff-detector++, stronghold-finder++, sus-chunk-finder++, tunnel-finder++, voice-chat-sniffer++, attribute-swap++, auto-city++, auto-log++, bombaura++, bow-aimbot++, combat-extras++, combat-macros++, crystal-aura++, crystal-optim++, fast-bow++, godmode++, hit-particles++, self-defense++, wallbang++, auto-wasp++, click-tp++, elytra-fly++, fast-climb++, flight++, freecam++, jumps++, movement-extras++, noclip++, reverse-step++, snap-tap++, speed++, travel++, trident-boost++, auto-sign++, autoer++, chunk-reloader++, home-utils++, instant-mine++, invisibility++, miner++, nbt-adder++, no-break-delay++, no-cooldown++, portal-inv++, reach++, render-method++, schematic-builder++, swing-speed++, timer++, world-extras++, y-level-spoof++, anti-afk++, book-bot++, bypass++, camera-tweaks++, chat-extras++, fake-visuals++, force-commands++, hide-chat++, hostile-esp++, item-highlight++, lag-detector++, notifiers++, packet-logger++, ping-spoofer++, swarm++, time-changer++, trail++`
 
 ---
 
@@ -283,4 +284,4 @@ against it carries the same terms: use it, change it, share it, but keep it open
 `stash-finder`, `chunk-detection`, `block-entities`, `particle-esp`, `ore-highlighting`, `geode-finder`,
 `stronghold-finder`, `tunnel-finder`, `redstone-detection`, `search-map`, `combat-modules`, `movement-modules`,
 `elytra`, `freecam`, `inventory-tools`, `schematic-building`, `litematica`, `packet-logger`,
-`lag-detection`, `hud`, `baritone`, `nether-travel`, `nether-highways`, `highway-mining`
+`lag-detection`, `hud`, `baritone`, `nether-travel`, `nether-highways`, `highway-mining`, `sound-esp`, `sound-detector`

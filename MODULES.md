@@ -1,6 +1,6 @@
 # Module reference
 
-Every one of the **97 modules**, what it is for, and what each of its settings does.
+Every one of the **98 modules**, what it is for, and what each of its settings does.
 
 Settings marked *(hidden until enabled)* only appear once the option above them is switched on, so the menu stays short until you need the detail. Anything named **(risky)** fabricates movement, rotation or timing you did not actually perform — those are off by default and can get you rubber-banded or kicked.
 
@@ -1370,6 +1370,50 @@ Hunts for the redstone and wiring signatures that give away hidden bases and far
   Count hoppers.
 - `connected-scan-color` — *default `rgba(0, 200, 255, 200)`, hidden until enabled*  
   Colour for connected-scan chunks.
+
+
+### sound-detector++
+
+Marks where sounds come from — chests, furnaces, pistons, villagers, players, totems, mining and whatever else you pick — with a box and a full-height column, so bases and hidden players give themselves away.
+
+**General**
+
+- `chunk-range` — *default `4`*  
+  How many chunks out from yours, in every direction, a sound is marked — at any height, from the bottom of the world to the top. The server only sends sounds within its own hearing distance of you, so going past that finds nothing more.
+- `keep-for` — *default `120`*  
+  How long a mark stays after the last sound from that spot, in seconds. It fades out over that time. 0 keeps marks until you switch the module off.
+- `ignore-near-me` — *default `4`*  
+  Leave out sounds within this many blocks of you — your own doors, chests, eating and footsteps-adjacent noise. Sounds your own character makes are always left out.
+- `any-block-breaking` — *default `true`*  
+  Mark every block somebody else breaks in range, whatever it is. Mining is the loudest thing a hidden player does, and the server tells you about each block that goes.
+- `all-sounds` — *default `false`*  
+  Mark every sound in range, not just the ones picked below. Noisy — mobs, water and lava all count — but nothing slips past.
+- `chat` — *default `true`*  
+  Note new sounds in chat with what made them and where. A spot that keeps making noise is noted once, and the same kind of sound in the same chunk at most once every half minute — someone mining is one line, not one per block.
+
+**What to listen for**
+
+- `blocks` — *default `Blocks.CHEST, Blocks.TRAPPED_CHEST, Blocks.ENDER_CHEST, Blocks.BARREL, Blocks.SHULKER_BOX, Blocks.FURNACE, Blocks.BLAST_FURNACE, Blocks.SMOKER, Blocks.BREWING_STAND, Blocks.ANVIL, Blocks.PISTON, Blocks.STICKY_PISTON, Blocks.DISPENSER, Blocks.NOTE_BLOCK, Blocks.NETHER_PORTAL, Blocks.BEACON, Blocks.CONDUIT, Blocks.RESPAWN_ANCHOR, Blocks.BELL, Blocks.COMPOSTER, Blocks.GRINDSTONE, Blocks.SMITHING_TABLE, Blocks.ENCHANTING_TABLE, Blocks.OAK_DOOR, Blocks.IRON_DOOR, Blocks.OAK_TRAPDOOR, Blocks.OAK_FENCE_GATE, Blocks.LEVER, Blocks.CRAFTER, Blocks.JUKEBOX, Blocks.CAMPFIRE`*  
+  Blocks whose sounds are marked: opening, firing, brewing, working, ringing and so on. A wooden door covers every wooden door, a shulker box every colour, a piston both kinds. Somebody breaking one of these is marked as well.
+- `items` — *default `Items.TOTEM_OF_UNDYING, Items.BONE_MEAL, Items.FLINT_AND_STEEL, Items.FIRE_CHARGE, Items.TRIDENT, Items.CROSSBOW, Items.SHIELD, Items.CHORUS_FRUIT, Items.BUCKET, Items.IRON_HOE, Items.IRON_AXE, Items.NETHERITE_CHESTPLATE, Items.GOAT_HORN, Items.MACE`*  
+  Items whose sounds are marked where they were used: a totem popping, bone meal, flint and steel, a bucket, a crossbow, a shield blocking. Any one hoe, axe or shovel covers them all, and any armour piece covers putting armour on.
+
+**Render**
+
+- `shape-mode` — *default `ShapeMode.Both`*  
+  How each mark is drawn.
+- `column` — *default `true`*  
+  Run a thin column through each mark from the bottom of the world to the top, so a sound deep underground or high above is still easy to find.
+- `tracers` — *default `false`*  
+  Draw a line from your view to each mark.
+- `block-color` — *default `rgba(255, 150, 30, 160)`*  
+  Colour for sounds made by blocks, and blocks being broken.
+- `entity-color` — *default `rgba(255, 50, 60, 160)`*  
+  Colour for sounds made by entities.
+- `item-color` — *default `rgba(40, 200, 255, 160)`*  
+  Colour for sounds made by items being used.
+- `other-color` — *default `rgba(200, 200, 200, 120)`*  
+  Colour for everything else, with all-sounds on.
 
 
 ### spawn-cluster-finder++
