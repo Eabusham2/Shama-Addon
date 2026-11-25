@@ -3,7 +3,9 @@ name: Build
 on:
   push:
     branches: [ main ]
-    tags: [ "v*" ]
+    # numbered releases: v1.21.11.2 and the like, and the plain Minecraft version tag (1.21.11),
+    # which can be moved to a newer commit to republish its release with a fresh jar
+    tags: [ "v*", "1.*" ]
   pull_request:
     branches: [ main ]
   workflow_dispatch:
@@ -110,8 +112,10 @@ jobs:
           files: ${{ steps.jar.outputs.path }}
           make_latest: true
 
+      # A tag pushed or moved to a commit publishes that tag's release, replacing its jar if it
+      # already has one. latest is left to the step above.
       - name: Publish a tagged release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/') && github.ref_name != 'latest'
         uses: softprops/action-gh-release@v2
         with:
           name: ${{ github.ref_name }}
