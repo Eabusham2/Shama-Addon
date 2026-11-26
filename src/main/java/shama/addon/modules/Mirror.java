@@ -46,7 +46,9 @@ import java.util.Set;
  *
  * Everything is done with your own keys and your own view, the way you would do it yourself:
  * nothing is sent that a player could not send, and nothing is done that the player you are
- * copying did not do. When they are too far off to copy directly, Baritone walks you back to them.
+ * copying did not do. When they are too far off to copy directly, Baritone walks you back to them —
+ * only walks: while mirror++ is on it is not allowed to break or place blocks, bucket-drop or
+ * parkour-jump, and its own settings are put back when you stop.
  * Pressing a movement key yourself pauses the copying until you let go.
  *
  * Start it with .mirror <player> or .shadow <player> [seconds]; .mirror stop or .shadow stop ends it.
@@ -75,7 +77,7 @@ public class Mirror extends Module {
         .defaultValue(30).range(5, 600).sliderRange(10, 120).build());
 
     private final Setting<Boolean> useBaritone = sgMove.add(new BoolSetting.Builder()
-        .name("baritone-catch-up").description("When the spot you are copying is further away than catch-up-distance, let Baritone walk you to it, around walls and over gaps. Off, you only ever walk their path.")
+        .name("baritone-catch-up").description("When the spot you are copying is further away than catch-up-distance, let Baritone walk you to it, around walls and obstacles. It only walks: no breaking or placing blocks, no bucket drops, no parkour jumps, and your own Baritone settings come back when you stop. Off, you head for their path and walk it the whole way.")
         .defaultValue(true).build());
     private final Setting<Integer> catchUp = sgMove.add(new IntSetting.Builder()
         .name("catch-up-distance").description("How far away the spot you are copying can be before Baritone takes over to get you there. Copying resumes once you are back within half of this.")
@@ -127,6 +129,7 @@ public class Mirror extends Module {
     @Override
     public void onDeactivate() {
         if (baritoneOn && BaritoneUtils.IS_AVAILABLE) BaritoneBridge.stop();
+        if (BaritoneUtils.IS_AVAILABLE) BaritoneBridge.restoreWalkOnly();
         baritoneOn = false;
         handBackKeys();
         trail.clear();
@@ -268,7 +271,12 @@ public class Mirror extends Module {
     private Sample pickGoal() {
         int last = trail.size() - 1;
         boolean mirror = mode.get() == Mode.Mirror;
-        if (mirror && dist2(trail.get(last)) > (double) catchUp.get() * catchUp.get()) { pointer = last; return trail.get(last); }
+        boolean baritoneWalks = useBaritone.get() && BaritoneUtils.IS_AVAILABLE && !mc.player.isGliding()
+            && !(trail.get(last).glide() && canFly());
+        if (mirror && baritoneWalks && dist2(trail.get(last)) > (double) catchUp.get() * catchUp.get()) {
+            pointer = last;
+            return trail.get(last);
+        }
 
         int newest = last;
         if (!mirror) {
@@ -291,6 +299,11 @@ public class Mirror extends Module {
         return trail.get(pointer);
     }
 
+    /** Elytra on and flying allowed. */
+    private boolean canFly() {
+        return elytra.get() && LivingEntity.canGlideWith(mc.player.getEquippedStack(EquipmentSlot.CHEST), EquipmentSlot.CHEST);
+    }
+
     private double dist2(Sample s) {
         double dx = s.x() - mc.player.getX(), dy = s.y() - mc.player.getY(), dz = s.z() - mc.player.getZ();
         return dx * dx + dy * dy + dz * dz;
@@ -300,7 +313,7 @@ public class Mirror extends Module {
         double dx = goal.x() - mc.player.getX(), dy = goal.y() - mc.player.getY(), dz = goal.z() - mc.player.getZ();
         double horiz = Math.sqrt(dx * dx + dz * dz), d3 = Math.sqrt(horiz * horiz + dy * dy);
         boolean gliding = mc.player.isGliding();
-        boolean canFly = elytra.get() && LivingEntity.canGlideWith(mc.player.getEquippedStack(EquipmentSlot.CHEST), EquipmentSlot.CHEST);
+        boolean canFly = canFly();
 
         // a rocket they fired at this point of their path: fire one too
         if (rockets.get() && canFly && gliding) {
@@ -320,6 +333,7 @@ public class Mirror extends Module {
             boolean moved = Math.abs(gx - lastGoalX) + Math.abs(gy - lastGoalY) + Math.abs(gz - lastGoalZ) > 3;
             // a new goal when they have moved on, or now and then when Baritone has given up
             if (!baritoneOn || moved || (!BaritoneBridge.busy() && tick - lastGoalTick > 20)) {
+                BaritoneBridge.walkOnly();
                 if (flyingWithoutYou) BaritoneBridge.goXZ(gx, gz);
                 else BaritoneBridge.goNear(gx, gy, gz, 1);
                 lastGoalX = gx; lastGoalY = gy; lastGoalZ = gz; lastGoalTick = tick;

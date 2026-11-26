@@ -139,6 +139,46 @@ public final class BaritoneBridge {
         travelSaved.clear();
     }
 
+    // ------------------------------------------------------------------ following someone
+
+    /** Settings changed while following a player, as they were before. */
+    private static final java.util.Map<String, Object> followSaved = new java.util.HashMap<>();
+
+    private static <T> void setFollow(baritone.api.Settings.Setting<T> s, String key, T value) {
+        if (!followSaved.containsKey(key)) followSaved.put(key, s.value);
+        s.value = value;
+    }
+
+    /**
+     * Walk only, while catching up with someone: no breaking blocks, no placing them to pillar or
+     * bridge, no bucket drops and no parkour jumps. The old values are kept.
+     */
+    public static void walkOnly() {
+        try {
+            var s = BaritoneAPI.getSettings();
+            setFollow(s.allowBreak, "allowBreak", false);
+            setFollow(s.allowPlace, "allowPlace", false);
+            setFollow(s.allowWaterBucketFall, "allowWaterBucketFall", false);
+            setFollow(s.allowParkour, "allowParkour", false);
+            setFollow(s.allowParkourPlace, "allowParkourPlace", false);
+        } catch (Throwable ignored) {}
+    }
+
+    /** Put back everything walkOnly changed. Safe to call when nothing was changed. */
+    @SuppressWarnings("unchecked")
+    public static void restoreWalkOnly() {
+        if (followSaved.isEmpty()) return;
+        try {
+            var s = BaritoneAPI.getSettings();
+            if (followSaved.containsKey("allowBreak")) s.allowBreak.value = (Boolean) followSaved.get("allowBreak");
+            if (followSaved.containsKey("allowPlace")) s.allowPlace.value = (Boolean) followSaved.get("allowPlace");
+            if (followSaved.containsKey("allowWaterBucketFall")) s.allowWaterBucketFall.value = (Boolean) followSaved.get("allowWaterBucketFall");
+            if (followSaved.containsKey("allowParkour")) s.allowParkour.value = (Boolean) followSaved.get("allowParkour");
+            if (followSaved.containsKey("allowParkourPlace")) s.allowParkourPlace.value = (Boolean) followSaved.get("allowParkourPlace");
+        } catch (Throwable ignored) {}
+        followSaved.clear();
+    }
+
     /** Put Baritone's settings back the way they were. Safe to call when nothing was changed. */
     public static void restore() {
         if (savedBreak == null) return;

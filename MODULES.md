@@ -2257,7 +2257,7 @@ Copy another player's movement — with them, or a set time behind along their p
 **Moving**
 
 - `baritone-catch-up` — *default `true`*  
-  When the spot you are copying is further away than catch-up-distance, let Baritone walk you to it, around walls and over gaps. Off, you only ever walk their path.
+  When the spot you are copying is further away than catch-up-distance, let Baritone walk you to it, around walls and obstacles. It only walks: no breaking or placing blocks, no bucket drops, no parkour jumps, and your own Baritone settings come back when you stop. Off, you head for their path and walk it the whole way.
 - `catch-up-distance` — *default `10`, hidden until enabled*  
   How far away the spot you are copying can be before Baritone takes over to get you there. Copying resumes once you are back within half of this.
 - `copy-look` — *default `true`*  

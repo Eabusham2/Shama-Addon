@@ -150,7 +150,7 @@ what the server already sent you.
 - **flight++** — Fly freely. How well it holds up depends on the server's anti-cheat.
 - **freecam++** — Smooth free-flying detached camera with pathing / rotate / sneak options.
 - **jumps++** — High / long / air / auto jump in one module.
-- **mirror++** — Copies another player's movement so a teammate can take you somewhere while you're away: walks the path they walked, jumps, sneaks, looks and flies with them, opening your elytra and firing a rocket only where they did. `.mirror <player>` stays with them; `.shadow <player> [seconds]` follows the same path a set time behind; Baritone walks you back to them when you fall too far behind. Press a movement key to take over; `.mirror stop` ends it.
+- **mirror++** — Copies another player's movement so a teammate can take you somewhere while you're away: walks the path they walked, jumps, sneaks, looks and flies with them, opening your elytra and firing a rocket only where they did. `.mirror <player>` stays with them; `.shadow <player> [seconds]` follows the same path a set time behind; Baritone walks you back to them when you fall too far behind, without breaking or placing anything. Press a movement key to take over; `.mirror stop` ends it.
 - **movement-extras++** — GUI-move / entity-control / slippy / reverse-step in one module.
 - **noclip++** — Lets you move freely through blocks. Works where the server doesn't correct your position (own worlds and lenient servers).
 - **reverse-step++** — Fall down small ledges instantly.
