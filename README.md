@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <b>98 modules for Meteor Client</b>, built around finding what other people have hidden —<br>
+  <b>99 modules for Meteor Client</b>, built around finding what other people have hidden —<br>
   bases, stashes, farms and players — with a full set of combat, movement and utility modules alongside.
 </p>
 
@@ -35,13 +35,13 @@ published unless the build passes, so a broken commit cannot become a download.
 |---|---:|---|
 | [Finding bases, stashes & players](#finding-bases-stashes--players) | 35 | Bases, stashes, farms and players — found from chunk data, packets, sounds, block patterns and timing. |
 | [Combat](#combat) | 14 | Crystals, bows, auras and self-defence. |
-| [Movement](#movement) | 14 | Flight, elytra, freecam, Baritone travel and movement helpers. |
+| [Movement](#movement) | 15 | Flight, elytra, freecam, Baritone travel, following a teammate and movement helpers. |
 | [Player](#player) | 18 | Mining, inventory and interaction with the world. |
 | [Misc](#misc) | 17 | Rendering, chat, HUD, timing and utilities. |
-| **Total** | **98** | |
+| **Total** | **99** | |
 
 Every module has settings, and every setting explains itself when you hover over it in-game.
-➡ **[MODULES.md](MODULES.md)** is the full write-up: all 98 modules, every setting, its
+➡ **[MODULES.md](MODULES.md)** is the full write-up: all 99 modules, every setting, its
 default, and every mode.
 
 ### What "(risky)" means
@@ -138,10 +138,10 @@ what the server already sent you.
 
 ### Movement
 
-*Flight, elytra, freecam, Baritone travel and movement helpers.*
+*Flight, elytra, freecam, Baritone travel, following a teammate and movement helpers.*
 
 <details>
-<summary><b>14 modules</b> — click to expand</summary>
+<summary><b>15 modules</b> — click to expand</summary>
 
 - **auto-wasp++** — Auto-fly pursuit that holds an offset over the nearest target.
 - **click-tp++** — Blink forward along your look. Bind a key and tap it.
@@ -150,6 +150,7 @@ what the server already sent you.
 - **flight++** — Fly freely. How well it holds up depends on the server's anti-cheat.
 - **freecam++** — Smooth free-flying detached camera with pathing / rotate / sneak options.
 - **jumps++** — High / long / air / auto jump in one module.
+- **mirror++** — Copies another player's movement so a teammate can take you somewhere while you're away: walks the path they walked, jumps, sneaks, looks and flies with them, opening your elytra and firing a rocket only where they did. `.mirror <player>` stays with them; `.shadow <player> [seconds]` follows the same path a set time behind; Baritone walks you back to them when you fall too far behind. Press a movement key to take over; `.mirror stop` ends it.
 - **movement-extras++** — GUI-move / entity-control / slippy / reverse-step in one module.
 - **noclip++** — Lets you move freely through blocks. Works where the server doesn't correct your position (own worlds and lenient servers).
 - **reverse-step++** — Fall down small ledges instantly.
@@ -221,7 +222,7 @@ what the server already sent you.
 
 For searching the page with a single find:
 
-`active-chunk-detector++, anomaly-scan++, anti-anti-esp++, base-detector++, block-entity-debug++, break-indicators++, chunk-finder++, chunk-loader++, deep-activity++, find-log++, geode-finder++, hidden-player-detect++, hole-finder++, hopper-debug++, light-debug++, loaded-region-finder++, logout-spots++, ocean-monument-finder++, ore-sim++, ore-spotter++, particle-esp++, player-detector++, rare-finder++, region-map++, rtp-finder++, search-map++, signal-scanner++, sound-detector++, spawn-cluster-finder++, spawner-finder++, staff-detector++, stronghold-finder++, sus-chunk-finder++, tunnel-finder++, voice-chat-sniffer++, attribute-swap++, auto-city++, auto-log++, bombaura++, bow-aimbot++, combat-extras++, combat-macros++, crystal-aura++, crystal-optim++, fast-bow++, godmode++, hit-particles++, self-defense++, wallbang++, auto-wasp++, click-tp++, elytra-fly++, fast-climb++, flight++, freecam++, jumps++, movement-extras++, noclip++, reverse-step++, snap-tap++, speed++, travel++, trident-boost++, auto-sign++, autoer++, chunk-reloader++, home-utils++, instant-mine++, invisibility++, miner++, nbt-adder++, no-break-delay++, no-cooldown++, portal-inv++, reach++, render-method++, schematic-builder++, swing-speed++, timer++, world-extras++, y-level-spoof++, anti-afk++, book-bot++, bypass++, camera-tweaks++, chat-extras++, fake-visuals++, force-commands++, hide-chat++, hostile-esp++, item-highlight++, lag-detector++, notifiers++, packet-logger++, ping-spoofer++, swarm++, time-changer++, trail++`
+`active-chunk-detector++, anomaly-scan++, anti-anti-esp++, base-detector++, block-entity-debug++, break-indicators++, chunk-finder++, chunk-loader++, deep-activity++, find-log++, geode-finder++, hidden-player-detect++, hole-finder++, hopper-debug++, light-debug++, loaded-region-finder++, logout-spots++, ocean-monument-finder++, ore-sim++, ore-spotter++, particle-esp++, player-detector++, rare-finder++, region-map++, rtp-finder++, search-map++, signal-scanner++, sound-detector++, spawn-cluster-finder++, spawner-finder++, staff-detector++, stronghold-finder++, sus-chunk-finder++, tunnel-finder++, voice-chat-sniffer++, attribute-swap++, auto-city++, auto-log++, bombaura++, bow-aimbot++, combat-extras++, combat-macros++, crystal-aura++, crystal-optim++, fast-bow++, godmode++, hit-particles++, self-defense++, wallbang++, auto-wasp++, click-tp++, elytra-fly++, fast-climb++, flight++, freecam++, jumps++, mirror++, movement-extras++, noclip++, reverse-step++, snap-tap++, speed++, travel++, trident-boost++, auto-sign++, autoer++, chunk-reloader++, home-utils++, instant-mine++, invisibility++, miner++, nbt-adder++, no-break-delay++, no-cooldown++, portal-inv++, reach++, render-method++, schematic-builder++, swing-speed++, timer++, world-extras++, y-level-spoof++, anti-afk++, book-bot++, bypass++, camera-tweaks++, chat-extras++, fake-visuals++, force-commands++, hide-chat++, hostile-esp++, item-highlight++, lag-detector++, notifiers++, packet-logger++, ping-spoofer++, swarm++, time-changer++, trail++`
 
 ---
 
@@ -284,4 +285,4 @@ against it carries the same terms: use it, change it, share it, but keep it open
 `stash-finder`, `chunk-detection`, `block-entities`, `particle-esp`, `ore-highlighting`, `geode-finder`,
 `stronghold-finder`, `tunnel-finder`, `redstone-detection`, `search-map`, `combat-modules`, `movement-modules`,
 `elytra`, `freecam`, `inventory-tools`, `schematic-building`, `litematica`, `packet-logger`,
-`lag-detection`, `hud`, `baritone`, `nether-travel`, `nether-highways`, `highway-mining`, `sound-esp`, `sound-detector`
+`lag-detection`, `hud`, `baritone`, `nether-travel`, `nether-highways`, `highway-mining`, `sound-esp`, `sound-detector`, `follow-player`, `mirror`, `shadow`, `afk-follow`

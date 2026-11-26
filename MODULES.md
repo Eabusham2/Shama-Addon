@@ -1,6 +1,6 @@
 # Module reference
 
-Every one of the **98 modules**, what it is for, and what each of its settings does.
+Every one of the **99 modules**, what it is for, and what each of its settings does.
 
 Settings marked *(hidden until enabled)* only appear once the option above them is switched on, so the menu stays short until you need the detail. Anything named **(risky)** fabricates movement, rotation or timing you did not actually perform — those are off by default and can get you rubber-banded or kicked.
 
@@ -2233,6 +2233,44 @@ High / long / air / auto jump in one module.
   Allow jumping again in mid-air.
 - `auto-jump` — *default `false`*  
   Jump automatically whenever possible.
+
+
+### mirror++
+
+Copy another player's movement — with them, or a set time behind along their path — walking, jumping, sneaking and flying with them. Start with .mirror <player> or .shadow <player> [seconds].
+
+**Modes** — Mirror, Shadow
+
+**General**
+
+- `mode` — *default `Mode.Mirror`*  
+  Mirror stays with the player and copies them as they go. Shadow copies them a set time behind, along the exact path they took.
+- `player` — *default `""`*  
+  Who to copy. Set by .mirror <player> and .shadow <player>.
+- `delay` — *default `1.0`, hidden until enabled*  
+  How far behind them Shadow follows, in seconds of their path.
+- `pause-when-you-move` — *default `true`*  
+  Pressing a movement key yourself pauses the copying until you let go, so you can always take back control.
+- `lost-after` — *default `30`*  
+  Seconds the player can be out of sight before copying stops. Until then you carry on along their path to where they were last seen.
+
+**Moving**
+
+- `baritone-catch-up` — *default `true`*  
+  When the spot you are copying is further away than catch-up-distance, let Baritone walk you to it, around walls and over gaps. Off, you only ever walk their path.
+- `catch-up-distance` — *default `10`, hidden until enabled*  
+  How far away the spot you are copying can be before Baritone takes over to get you there. Copying resumes once you are back within half of this.
+- `copy-look` — *default `true`*  
+  Look where they looked when you are with them, moving sideways or backwards as needed like you would yourself. Off, you look where you are walking.
+- `turn-speed` — *default `30`*  
+  The most your view turns in one tick, in degrees. Lower looks calmer; higher keeps up with sharp turns.
+
+**Flying**
+
+- `elytra` — *default `true`*  
+  Fly when they fly: jump and open your elytra where they took off, and steer along their flight path. Needs an elytra on; without one Baritone walks underneath them.
+- `copy-rockets` — *default `true`, hidden until enabled*  
+  Fire a rocket where they fired one, from your offhand or hotbar, switching back afterwards. Only ever when they did.
 
 
 ### movement-extras++

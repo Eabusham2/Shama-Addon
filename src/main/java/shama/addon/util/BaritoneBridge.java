@@ -70,6 +70,12 @@ public final class BaritoneBridge {
         catch (Throwable t) { return false; }
     }
 
+    /** Walk to within range blocks of a spot. */
+    public static boolean goNear(int x, int y, int z, int range) {
+        try { baritone().getCustomGoalProcess().setGoalAndPath(new baritone.api.pathing.goals.GoalNear(new BlockPos(x, y, z), range)); return true; }
+        catch (Throwable t) { return false; }
+    }
+
     /** Head for the nearest block of this kind Baritone knows about, loaded or remembered. */
     public static boolean goToNearest(net.minecraft.block.Block block) {
         try { baritone().getGetToBlockProcess().getToBlock(block); return true; }
