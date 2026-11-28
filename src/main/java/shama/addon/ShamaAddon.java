@@ -112,6 +112,7 @@ import shama.addon.modules.Wallbang;
 import shama.addon.modules.YLevelSpoofer;
 import shama.addon.modules.Bang;
 import shama.addon.commands.BangCommand;
+import shama.addon.commands.BangAnimCommand;
 import shama.addon.commands.NbtCommand;
 import shama.addon.commands.BnbtCommand;
 import meteordevelopment.meteorclient.commands.Commands;
@@ -252,6 +253,7 @@ public class ShamaAddon extends MeteorAddon {
         Commands.add(new NbtCommand());
         Commands.add(new BnbtCommand());
         Commands.add(BangCommand.INSTANCE);
+        Commands.add(BangAnimCommand.INSTANCE);
         Commands.add(new TravelCommand());
         Commands.add(new MirrorCommand(Mirror.Mode.Mirror));
         Commands.add(new MirrorCommand(Mirror.Mode.Shadow));

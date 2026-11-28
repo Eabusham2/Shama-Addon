@@ -154,7 +154,7 @@ public class Bang extends Module {
             }
         } else {
             // Normal mode: exactly restore original — face target, steady head, no limb animation
-            float yaw = followed.getYaw() + (position.get() == Position.Front ? 180f : 0f); // front: turn around to face target
+            float yaw = followed.getBodyYaw() + (position.get() == Position.Front ? 180f : 0f); // front: turn around to face target; back: match target (original bang-1)
             mc.player.setYaw(yaw);
             mc.player.setHeadYaw(yaw);
             mc.player.setBodyYaw(yaw);
@@ -211,6 +211,7 @@ public class Bang extends Module {
 
     /** Current swing extension 0..1 based on module speed. */
     public double extension() {
+        if (followed == null) return 0;
         double cycles = Math.max(0, mc.player.age - startAge) * speed.get() / 20;
         return 0.5 - 0.5 * Math.cos(2 * Math.PI * cycles);
     }
