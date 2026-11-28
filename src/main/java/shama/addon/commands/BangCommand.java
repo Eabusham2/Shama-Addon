@@ -84,7 +84,8 @@ public final class BangCommand extends Command {
     public PlayerInput applyInput(Input source, PlayerInput keyboard) {
         if (module == null || module.target.get().isBlank()) return keyboard;
         if (source != mc.player.input) return keyboard;
-        return module.legitInput().orElse(keyboard);
+        if (module.mode.get() == Bang.Mode.Legit) return module.legitInput().orElse(keyboard);
+        return PlayerInput.DEFAULT; // Normal: clear keyboard, no walking/crouching
     }
 
     /** Replace self-propelled movement before vanilla resolves collisions.
@@ -119,7 +120,7 @@ public final class BangCommand extends Command {
     public float renderExtension(PlayerEntityRenderState state) {
         if (module == null || !module.isActive() || module.isWalkingPhase() || module.followed == null) return -1;
         if (module.mode.get() == Bang.Mode.Legit) return -1; // Legit mode uses vanilla limb animation
-        if (mc.player != mc.player || state.id != mc.player.getId()) return -1;
+        if (state.id != mc.player.getId()) return -1;
         int age = MathHelper.floor(state.age);
         return (float) MathHelper.lerp(state.age - age, extension(age - 1), extension(age));
     }

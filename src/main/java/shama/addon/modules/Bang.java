@@ -162,6 +162,14 @@ public class Bang extends Module {
             } else if (walkingPhase) {
                 checkArrival();
             }
+        } else {
+            // Normal mode: exactly restore original — face target, steady head, no limb animation
+            float yaw = followed.getYaw();
+            mc.player.setYaw(yaw);
+            mc.player.setHeadYaw(yaw);
+            mc.player.setBodyYaw(yaw);
+            mc.player.setPitch(0);
+            mc.player.limbAnimator.reset();
         }
     }
 
