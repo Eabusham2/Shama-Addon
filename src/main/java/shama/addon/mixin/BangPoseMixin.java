@@ -1,5 +1,6 @@
 package shama.addon.mixin;
 
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.model.ModelPart;
 import net.minecraft.client.render.entity.model.BipedEntityModel;
 import net.minecraft.client.render.entity.state.BipedEntityRenderState;
@@ -27,6 +28,8 @@ public abstract class BangPoseMixin {
     @Inject(method = "setAngles(Lnet/minecraft/client/render/entity/state/BipedEntityRenderState;)V", at = @At("TAIL"))
     private void shama$bangPose(BipedEntityRenderState state, CallbackInfo ci) {
         if (!(state instanceof PlayerEntityRenderState player)) return;
+        // Only apply to the local player using the module, not the target or other players
+        if (player.id != MinecraftClient.getInstance().player.getId()) return;
 
         Bang module = MeteorClientAccessor.getBangModule();
         if (module == null || !module.isActive() || module.isWalkingPhase()) return;
