@@ -29,20 +29,27 @@ published unless the build passes, so a broken commit cannot become a download.
 
 ### Bang module — `bang++`
 
-A master module with two modes:
+A master module with two modes. **Command only works if `bang++` is enabled; enabling the module alone doesn't bang.**
 
-**Normal** — Instant hover-lock behind (or in front of) the target. Your head stays steady while your hips and legs swing forward together to touch their back, then draw away. No walking animation. Settings control height, distance, speed, and front/back position.
+**Normal** — Instant hover-lock behind (or in front of) the target. Body stays locked; you can look around (camera + head clamped to **±59°**). Your hips and legs swing forward together to touch their back, then draw away. No walking or crouching. Custom tilt visible on your client only. Settings: height, distance, speed, **front/back**, **Normal/Legit**. `height` min 0.
 
-**Legit** — Baritone walks you to the target first, then you walk/crouch in and out manually — looks like a real player doing it. Optional crouch at contact.
+**Legit** — Baritone walks you to the target first, then you walk/crouch in and out with vanilla animation — looks like a real player doing it. Optional crouch at contact. Others see real movement. (Needs Baritone.)
 
-Enable the module in the Misc category, then use the command to set the target:
+**`.bang`** (command, `bang++` required):
+- `.bang <player> [speed] [front|back]` — start; speed optional (default = `speed` setting); `front`/`back` optional (default = `position` setting); `front` turns you around to face target
+- `.bang <player>` while already banging that player — **unbangs them**
+- `.bang` no-arg — stop banging (module stays on)
+- `.unbang` — stop banging
 
-- `.bang Alex 2` — target Alex at 2 swings/second (uses module's speed setting if omitted)
-- `.bang` or `.unbang` — stop and disable the module
+**`.banganim`** (standalone, **no module**, no target lock):
+- `.banganim [speed]` toggle — same Normal pose, **not locked**, you can move + turn; speed optional
+- `.banganim noclip` — working noclip + **no player collision/pushing**
+- `.unbanganim` — off (restores noClip)
 
-All settings (mode, position, height, distance, speed) are in the module GUI and persist across restarts.
+Settings in GUI persist.
 
 ---
+
 
 ## What's in it
 
@@ -238,7 +245,7 @@ what the server already sent you.
 
 For searching the page with a single find:
 
-`active-chunk-detector++, anomaly-scan++, anti-anti-esp++, base-detector++, bang++, block-entity-debug++, break-indicators++, chunk-finder++, chunk-loader++, deep-activity++, find-log++, geode-finder++, hidden-player-detect++, hole-finder++, hopper-debug++, light-debug++, loaded-region-finder++, logout-spots++, ocean-monument-finder++, ore-sim++, ore-spotter++, particle-esp++, player-detector++, rare-finder++, region-map++, rtp-finder++, search-map++, signal-scanner++, sound-detector++, spawn-cluster-finder++, spawner-finder++, staff-detector++, stronghold-finder++, sus-chunk-finder++, tunnel-finder++, voice-chat-sniffer++, attribute-swap++, auto-city++, auto-log++, bombaura++, bow-aimbot++, combat-extras++, combat-macros++, crystal-aura++, crystal-optim++, fast-bow++, godmode++, hit-particles++, self-defense++, wallbang++, auto-wasp++, click-tp++, elytra-fly++, fast-climb++, flight++, freecam++, jumps++, mirror++, movement-extras++, noclip++, reverse-step++, snap-tap++, speed++, travel++, trident-boost++, auto-sign++, autoer++, chunk-reloader++, home-utils++, instant-mine++, invisibility++, miner++, nbt-adder++, no-break-delay++, no-cooldown++, portal-inv++, reach++, render-method++, schematic-builder++, swing-speed++, timer++, world-extras++, y-level-spoof++, anti-afk++, book-bot++, bypass++, camera-tweaks++, chat-extras++, fake-visuals++, force-commands++, hide-chat++, hostile-esp++, item-highlight++, lag-detector++, notifiers++, packet-logger++, ping-spoofer++, swarm++, time-changer++, trail++`
+`active-chunk-detector++, anomaly-scan++, anti-anti-esp++, base-detector++, block-entity-debug++, break-indicators++, chunk-finder++, chunk-loader++, deep-activity++, find-log++, geode-finder++, hidden-player-detect++, hole-finder++, hopper-debug++, light-debug++, loaded-region-finder++, logout-spots++, ocean-monument-finder++, ore-sim++, ore-spotter++, particle-esp++, player-detector++, rare-finder++, region-map++, rtp-finder++, search-map++, signal-scanner++, sound-detector++, spawn-cluster-finder++, spawner-finder++, staff-detector++, stronghold-finder++, sus-chunk-finder++, tunnel-finder++, voice-chat-sniffer++, attribute-swap++, auto-city++, auto-log++, bombaura++, bow-aimbot++, combat-extras++, combat-macros++, crystal-aura++, crystal-optim++, fast-bow++, godmode++, hit-particles++, self-defense++, wallbang++, auto-wasp++, click-tp++, elytra-fly++, fast-climb++, flight++, freecam++, jumps++, mirror++, movement-extras++, noclip++, reverse-step++, snap-tap++, speed++, travel++, trident-boost++, auto-sign++, autoer++, chunk-reloader++, home-utils++, instant-mine++, invisibility++, miner++, nbt-adder++, no-break-delay++, no-cooldown++, portal-inv++, reach++, render-method++, schematic-builder++, swing-speed++, timer++, world-extras++, y-level-spoof++, anti-afk++, bang++, book-bot++, bypass++, camera-tweaks++, chat-extras++, fake-visuals++, force-commands++, hide-chat++, hostile-esp++, item-highlight++, lag-detector++, notifiers++, packet-logger++, ping-spoofer++, swarm++, time-changer++, trail++`
 
 ---
 

@@ -1,6 +1,6 @@
 # Module reference
 
-Every one of the **99 modules**, what it is for, and what each of its settings does.
+Every one of the **100 modules**, what it is for, and what each of its settings does.
 
 Settings marked *(hidden until enabled)* only appear once the option above them is switched on, so the menu stays short until you need the detail. Anything named **(risky)** fabricates movement, rotation or timing you did not actually perform — those are off by default and can get you rubber-banded or kicked.
 
@@ -2906,6 +2906,37 @@ Periodic actions to prevent AFK kicks.
   How fast to spin while AFK.
 - `delay` — *default `20`*  
   Ticks between actions.
+
+
+### bang++
+
+Hover behind or in front of a player and swing to touch them. Normal mode locks on; Legit mode walks there first.
+
+**Modes** — Normal, Legit
+
+**Modes** — Back, Front
+
+**General**
+
+- `mode` — *default `Mode.Normal`*  
+  Normal = instant hover lock with leg swing. Legit = Baritone walks to target first, then you walk/crouch manually.
+- `position` — *default `Position.Back`*  
+  Whether the animation happens behind or in front of the target.
+- `height` — *default `0.2`*  
+  Vertical offset from the target's feet. 0.2 puts you at their waist.
+- `distance` — *default `0.18`*  
+  Extra horizontal distance from the target's hitbox. Added to the contact distance.
+- `speed` — *default `1.0`*  
+  Swing cycles per second.
+
+**Legit Mode**
+
+- `walk-to-target` — *default `true`, hidden until enabled*  
+  In Legit mode, use Baritone to walk to the target before starting the animation.
+- `walk-range` — *default `2`, hidden until enabled*  
+  How close Baritone gets before the manual animation takes over.
+- `crouch-at-contact` — *default `true`, hidden until enabled*  
+  In Legit mode, crouch at the moment of contact.
 
 
 ### book-bot++
