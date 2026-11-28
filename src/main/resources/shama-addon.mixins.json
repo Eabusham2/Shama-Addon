@@ -6,6 +6,9 @@
   "mixins": [],
   "client": [
     "AttackCooldownMixin",
+    "BangInputMixin",
+    "BangMovementMixin",
+    "BangPoseMixin",
     "BlockBreakingSpeedMixin",
     "CountPlacementModifierAccessor",
     "HandSwingDurationMixin",

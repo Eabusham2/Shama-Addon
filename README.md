@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <b>99 modules for Meteor Client</b>, built around finding what other people have hidden —<br>
+  <b>100 modules for Meteor Client</b>, built around finding what other people have hidden —<br>
   bases, stashes, farms and players — with a full set of combat, movement and utility modules alongside.
 </p>
 
@@ -27,6 +27,21 @@ published unless the build passes, so a broken commit cannot become a download.
 2. Drop the `.jar` into your `mods` folder next to Meteor
 3. Launch — the modules appear in the Meteor menu under their own categories
 
+### Bang module — `bang++`
+
+A master module with two modes:
+
+**Normal** — Instant hover-lock behind (or in front of) the target. Your head stays steady while your hips and legs swing forward together to touch their back, then draw away. No walking animation. Settings control height, distance, speed, and front/back position.
+
+**Legit** — Baritone walks you to the target first, then you walk/crouch in and out manually — looks like a real player doing it. Optional crouch at contact.
+
+Enable the module in the Misc category, then use the command to set the target:
+
+- `.bang Alex 2` — target Alex at 2 swings/second (uses module's speed setting if omitted)
+- `.bang` or `.unbang` — stop and disable the module
+
+All settings (mode, position, height, distance, speed) are in the module GUI and persist across restarts.
+
 ---
 
 ## What's in it
@@ -37,8 +52,8 @@ published unless the build passes, so a broken commit cannot become a download.
 | [Combat](#combat) | 14 | Crystals, bows, auras and self-defence. |
 | [Movement](#movement) | 15 | Flight, elytra, freecam, Baritone travel, following a teammate and movement helpers. |
 | [Player](#player) | 18 | Mining, inventory and interaction with the world. |
-| [Misc](#misc) | 17 | Rendering, chat, HUD, timing and utilities. |
-| **Total** | **99** | |
+| [Misc](#misc) | 18 | Rendering, chat, HUD, timing and utilities. |
+| **Total** | **100** | |
 
 Every module has settings, and every setting explains itself when you hover over it in-game.
 ➡ **[MODULES.md](MODULES.md)** is the full write-up: all 99 modules, every setting, its
@@ -194,9 +209,10 @@ what the server already sent you.
 *Rendering, chat, HUD, timing and utilities.*
 
 <details>
-<summary><b>17 modules</b> — click to expand</summary>
+<summary><b>18 modules</b> — click to expand</summary>
 
 - **anti-afk++** — Periodic actions to prevent AFK kicks.
+- **bang++** — Hover behind or in front of a player and swing to touch them. Normal mode locks on; Legit mode walks there first with Baritone.
 - **book-bot++** — Writes the held writable book with your text.
 - **bypass++** — Small client-side tweaks that make other modules look more legitimate to anti-cheats.
 - **camera-tweaks++** — Custom FOV and view-bob overrides.
@@ -222,7 +238,7 @@ what the server already sent you.
 
 For searching the page with a single find:
 
-`active-chunk-detector++, anomaly-scan++, anti-anti-esp++, base-detector++, block-entity-debug++, break-indicators++, chunk-finder++, chunk-loader++, deep-activity++, find-log++, geode-finder++, hidden-player-detect++, hole-finder++, hopper-debug++, light-debug++, loaded-region-finder++, logout-spots++, ocean-monument-finder++, ore-sim++, ore-spotter++, particle-esp++, player-detector++, rare-finder++, region-map++, rtp-finder++, search-map++, signal-scanner++, sound-detector++, spawn-cluster-finder++, spawner-finder++, staff-detector++, stronghold-finder++, sus-chunk-finder++, tunnel-finder++, voice-chat-sniffer++, attribute-swap++, auto-city++, auto-log++, bombaura++, bow-aimbot++, combat-extras++, combat-macros++, crystal-aura++, crystal-optim++, fast-bow++, godmode++, hit-particles++, self-defense++, wallbang++, auto-wasp++, click-tp++, elytra-fly++, fast-climb++, flight++, freecam++, jumps++, mirror++, movement-extras++, noclip++, reverse-step++, snap-tap++, speed++, travel++, trident-boost++, auto-sign++, autoer++, chunk-reloader++, home-utils++, instant-mine++, invisibility++, miner++, nbt-adder++, no-break-delay++, no-cooldown++, portal-inv++, reach++, render-method++, schematic-builder++, swing-speed++, timer++, world-extras++, y-level-spoof++, anti-afk++, book-bot++, bypass++, camera-tweaks++, chat-extras++, fake-visuals++, force-commands++, hide-chat++, hostile-esp++, item-highlight++, lag-detector++, notifiers++, packet-logger++, ping-spoofer++, swarm++, time-changer++, trail++`
+`active-chunk-detector++, anomaly-scan++, anti-anti-esp++, base-detector++, bang++, block-entity-debug++, break-indicators++, chunk-finder++, chunk-loader++, deep-activity++, find-log++, geode-finder++, hidden-player-detect++, hole-finder++, hopper-debug++, light-debug++, loaded-region-finder++, logout-spots++, ocean-monument-finder++, ore-sim++, ore-spotter++, particle-esp++, player-detector++, rare-finder++, region-map++, rtp-finder++, search-map++, signal-scanner++, sound-detector++, spawn-cluster-finder++, spawner-finder++, staff-detector++, stronghold-finder++, sus-chunk-finder++, tunnel-finder++, voice-chat-sniffer++, attribute-swap++, auto-city++, auto-log++, bombaura++, bow-aimbot++, combat-extras++, combat-macros++, crystal-aura++, crystal-optim++, fast-bow++, godmode++, hit-particles++, self-defense++, wallbang++, auto-wasp++, click-tp++, elytra-fly++, fast-climb++, flight++, freecam++, jumps++, mirror++, movement-extras++, noclip++, reverse-step++, snap-tap++, speed++, travel++, trident-boost++, auto-sign++, autoer++, chunk-reloader++, home-utils++, instant-mine++, invisibility++, miner++, nbt-adder++, no-break-delay++, no-cooldown++, portal-inv++, reach++, render-method++, schematic-builder++, swing-speed++, timer++, world-extras++, y-level-spoof++, anti-afk++, book-bot++, bypass++, camera-tweaks++, chat-extras++, fake-visuals++, force-commands++, hide-chat++, hostile-esp++, item-highlight++, lag-detector++, notifiers++, packet-logger++, ping-spoofer++, swarm++, time-changer++, trail++`
 
 ---
 

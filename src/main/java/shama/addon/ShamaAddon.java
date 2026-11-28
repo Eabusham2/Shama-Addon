@@ -110,6 +110,8 @@ import shama.addon.modules.SusChunkFinder;
 import shama.addon.modules.Timer;
 import shama.addon.modules.Wallbang;
 import shama.addon.modules.YLevelSpoofer;
+import shama.addon.modules.Bang;
+import shama.addon.commands.BangCommand;
 import shama.addon.commands.NbtCommand;
 import shama.addon.commands.BnbtCommand;
 import meteordevelopment.meteorclient.commands.Commands;
@@ -160,6 +162,7 @@ public class ShamaAddon extends MeteorAddon {
         Modules.get().add(new OreSim());
         Modules.get().add(new ReachPlus());
         Modules.get().add(new Wallbang());
+        Modules.get().add(new Bang());
         Modules.get().add(new ForceCommands());
         Modules.get().add(new Freecam());
         Modules.get().add(new Speed());
@@ -248,6 +251,7 @@ public class ShamaAddon extends MeteorAddon {
 
         Commands.add(new NbtCommand());
         Commands.add(new BnbtCommand());
+        Commands.add(BangCommand.INSTANCE);
         Commands.add(new TravelCommand());
         Commands.add(new MirrorCommand(Mirror.Mode.Mirror));
         Commands.add(new MirrorCommand(Mirror.Mode.Shadow));
