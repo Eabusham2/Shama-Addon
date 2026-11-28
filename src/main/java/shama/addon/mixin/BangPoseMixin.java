@@ -1,5 +1,6 @@
 package shama.addon.mixin;
 
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.model.ModelPart;
 import net.minecraft.client.render.entity.model.BipedEntityModel;
 import net.minecraft.client.render.entity.state.BipedEntityRenderState;
@@ -27,18 +28,31 @@ public abstract class BangPoseMixin {
     @Inject(method = "setAngles(Lnet/minecraft/client/render/entity/state/BipedEntityRenderState;)V", at = @At("TAIL"))
     private void shama$bangPose(BipedEntityRenderState state, CallbackInfo ci) {
         if (!(state instanceof PlayerEntityRenderState player)) return;
+        // Only apply to the local player using the module, not the target or other players
+        if (player.id != MinecraftClient.getInstance().player.getId()) return;
 
         Bang module = MeteorClientAccessor.getBangModule();
+
+        // ---- banganim (no module, no lock, doesn't require bang++) ----
+        shama.addon.commands.BangAnimCommand anim = shama.addon.commands.BangAnimCommand.INSTANCE;
+        if (anim != null && anim.isAnimActive()) {
+            float stroke = anim.animExtension(player);
+            if (stroke >= 0) { applyStroke(stroke); return; }
+        }
+
+        // ---- bang++ Normal ----
         if (module == null || !module.isActive() || module.isWalkingPhase()) return;
         if (module.mode.get() == Bang.Mode.Legit) return; // Only Normal mode gets the custom pose
-
-        float stroke = module.extension() > 0 ? (float) module.extension() : 0;
-        if (stroke <= 0) {
-            // Get from command as fallback
-            stroke = BangCommand.INSTANCE.renderExtension(player);
-        }
+        if (module.followed == null) return;              // FIX: no animation after .bang/.unbang
+        float stroke = (float) module.extension();
+        if (stroke < 0) stroke = 0;
+        if (stroke <= 0) stroke = BangCommand.INSTANCE.renderExtension(player); // fallback
         if (stroke < 0) return;
 
+        applyStroke(stroke);
+    }
+
+    private void applyStroke(float stroke) {
         // Counter the root's short slide so the head and shoulders stay pinned. Player models
         // are drawn at 15/16 scale, with 16 model pixels to the block before that scale.
         float shoulderZ = -(1 - stroke) * BangCommand.TRAVEL * 16 / 0.9375f;

@@ -27,7 +27,6 @@ public class Bang extends Module {
     public enum Position { Back, Front }
 
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
-    private final SettingGroup sgTarget = settings.createGroup("Target");
     private final SettingGroup sgLegit = settings.createGroup("Legit Mode");
 
     public final Setting<Mode> mode = sgGeneral.add(new EnumSetting.Builder<Mode>()
@@ -46,9 +45,9 @@ public class Bang extends Module {
         .name("height")
         .description("Vertical offset from the target's feet. 0.2 puts you at their waist.")
         .defaultValue(0.2)
-        .min(-2)
+        .min(0)
         .max(2)
-        .sliderRange(-1, 1)
+        .sliderRange(0, 1)
         .decimalPlaces(2)
         .build());
 
@@ -70,12 +69,6 @@ public class Bang extends Module {
         .max(10)
         .sliderRange(0.1, 5)
         .decimalPlaces(1)
-        .build());
-
-    public final Setting<String> target = sgTarget.add(new StringSetting.Builder()
-        .name("player")
-        .description("Who to bang. Set by .bang <player> <speed>.")
-        .defaultValue("")
         .build());
 
     public final Setting<Boolean> legitWalk = sgLegit.add(new BoolSetting.Builder()
@@ -103,11 +96,14 @@ public class Bang extends Module {
         .build());
 
     // Runtime state (public for BangCommand access)
+    public String targetName = "";
     public PlayerEntity followed;
     public int startAge;
     public boolean walkingPhase;
     public boolean atContact;
     public int crouchTicks;
+    public double legitPhase;
+    public boolean hasStartedLegit;
 
     public Bang() {
         super(shama.addon.ShamaAddon.MISC, "bang++",
@@ -116,16 +112,14 @@ public class Bang extends Module {
 
     @Override
     public void onActivate() {
-        if (target.get().isBlank()) {
-            Chat.error("[bang] No target set. Use .bang <player> [speed] to start.");
-            toggle();
-            return;
-        }
+        // Enabling the module alone does NOT start banging; need .bang <player>.
         followed = null;
         startAge = 0;
         walkingPhase = false;
         atContact = false;
         crouchTicks = 0;
+        legitPhase = 0;
+        hasStartedLegit = false;
     }
 
     @Override
@@ -150,8 +144,26 @@ public class Bang extends Module {
         BangCommand.INSTANCE.setTarget(followed);
         BangCommand.INSTANCE.setSpeed(speed.get());
 
-        if (mode.get() == Mode.Legit && !walkingPhase) {
-            startWalkingPhase();
+        if (mode.get() == Mode.Legit) {
+            if (!walkingPhase && !hasStartedLegit) {
+                // Walk phase first (Baritone), once
+                hasStartedLegit = true;
+                startWalkingPhase();
+            } else if (walkingPhase) {
+                checkArrival();
+            }
+        } else {
+            // Normal mode: body locked in animation, but you can LOOK AROUND (mouse changes head; body stays locked).
+            float bodyYaw = followed.getBodyYaw() + (position.get() == Position.Front ? 180f : 0f); // front: turn around; back: match target (original bang-1)
+            mc.player.setBodyYaw(bodyYaw);   // lock body facing
+            // ±59 cutoff + NO glitch: lock body AND clamp YAW + head together (no fighting turn-back).
+            // (revert removing setYaw; you can't fight what isn't set.) 
+            float rel = net.minecraft.util.math.MathHelper.wrapDegrees(mc.player.getYaw() - bodyYaw);
+            float clamped = bodyYaw + net.minecraft.util.math.MathHelper.clamp(rel, -59f, 59f);
+            mc.player.setBodyYaw(bodyYaw);
+            mc.player.setYaw(clamped);
+            mc.player.setHeadYaw(clamped);
+            mc.player.limbAnimator.reset();
         }
     }
 
@@ -159,7 +171,7 @@ public class Bang extends Module {
         if (followed != null && !followed.isRemoved() && followed.getEntityWorld() == mc.world) return followed;
         for (PlayerEntity p : mc.world.getPlayers()) {
             if (p == mc.player) continue;
-            if (p.getName().getString().equalsIgnoreCase(target.get())) return p;
+            if (p.getName().getString().equalsIgnoreCase(targetName)) return p;
         }
         return null;
     }
@@ -195,6 +207,7 @@ public class Bang extends Module {
             startAge = mc.player.age;
             atContact = false;
             crouchTicks = 0;
+            legitPhase = 0;
             Chat.info("[bang] Arrived. Starting animation.");
         }
         return false;
@@ -202,6 +215,7 @@ public class Bang extends Module {
 
     /** Current swing extension 0..1 based on module speed. */
     public double extension() {
+        if (followed == null) return 0;
         double cycles = Math.max(0, mc.player.age - startAge) * speed.get() / 20;
         return 0.5 - 0.5 * Math.cos(2 * Math.PI * cycles);
     }
@@ -216,46 +230,42 @@ public class Bang extends Module {
         return t.getEntityPos().add(sign * behind * facing.x, height.get(), sign * behind * facing.z);
     }
 
-    /** Legit mode: generate PlayerInput for walking/crouching. */
+/**
+     * Legit mode: generate vanilla PlayerInput — walking + crouching, no custom pose,
+     * no hover-lock. Same logic as original; usable with a vanilla macro + good setup.
+     *
+     *   walk toward a spot moving 0.6↔1.3 blocks behind their facing
+     *   strafe left/right, jump on obstacle, sprint when far
+     *   crouch alternating half-time when touching
+     */
     public Optional<PlayerInput> legitInput() {
         if (mode.get() != Mode.Legit || walkingPhase) return Optional.empty();
 
-        Vec3d anchor = getAnchorPos(followed);
-        double dx = anchor.x - mc.player.getX();
-        double dz = anchor.z - mc.player.getZ();
-        double horiz = Math.sqrt(dx * dx + dz * dz);
-
-        boolean forward = horiz > 0.15;
-        boolean crouch = false;
-
-        // At contact distance: crouch for a few ticks
-        if (horiz < 0.15 && !atContact) {
-            atContact = true;
-            crouchTicks = legitCrouch.get() ? 4 : 0;
-        }
-        if (crouchTicks > 0) {
-            crouch = true;
-            crouchTicks--;
-        }
-        // Leaving contact: stand up and reset
-        if (atContact && horiz > 0.3) {
-            atContact = false;
-        }
-
-        float yaw = followed.getBodyYaw();
+        float yaw = followed.getYaw();
         mc.player.setYaw(yaw);
-        mc.player.setHeadYaw(yaw);
-        mc.player.setBodyYaw(yaw);
-        mc.player.setPitch(0);
+        Vec3d facing = Vec3d.fromPolar(0, yaw);
+        double dx = followed.getX() - mc.player.getX();
+        double dz = followed.getZ() - mc.player.getZ();
+        int sign = position.get() == Position.Back ? -1 : 1;
 
-        return Optional.of(new net.minecraft.util.PlayerInput(
-            forward, false, false, false, false, crouch, forward
+        // Walk toward a spot that moves between 0.6 and 1.3 blocks in front/behind their facing.
+        double behind = 0.95 + 0.35 * Math.cos(2 * Math.PI * legitPhase);
+        double forward = sign * (dx * facing.x + dz * facing.z - behind);
+        double left = dx * facing.z - dz * facing.x;
+        boolean close = mc.player.squaredDistanceTo(followed) < 4;
+        boolean crouch = legitCrouch.get() && close && legitPhase >= 0.5;
+        legitPhase = (legitPhase + speed.get() / 20) % 1;
+
+        boolean jump = mc.player.horizontalCollision && mc.player.isOnGround();
+        return Optional.of(new PlayerInput(
+            forward > 0.08, forward < -0.08, left > 0.08, left < -0.08,
+            jump, crouch, !close && forward > 0.08
         ));
     }
 
     @Override
     public String getInfoString() {
-        if (target.get().isBlank()) return null;
-        return mode.get().name() + " " + position.get().name() + " " + target.get();
+        if (targetName.isBlank()) return null;
+        return mode.get().name() + " " + position.get().name() + " " + targetName;
     }
 }
