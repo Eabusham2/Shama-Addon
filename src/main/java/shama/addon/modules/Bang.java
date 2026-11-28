@@ -156,11 +156,10 @@ public class Bang extends Module {
             // Normal mode: body locked in animation, but you can LOOK AROUND (mouse changes head; body stays locked).
             float bodyYaw = followed.getBodyYaw() + (position.get() == Position.Front ? 180f : 0f); // front: turn around; back: match target (original bang-1)
             mc.player.setBodyYaw(bodyYaw);   // lock body facing
-            // FIX glitch: your lock + vanilla body-turning fight past ~90°. Lock head from turning past ±89° to side.
-            float rel = net.minecraft.util.math.MathHelper.wrapDegrees(mc.player.getYaw() - bodyYaw);
-            float clamped = bodyYaw + net.minecraft.util.math.MathHelper.clamp(rel, -89f, 89f);
-            mc.player.setYaw(clamped);
-            mc.player.setHeadYaw(clamped);   // clamp head; body stays locked; still can look around within ±89°
+            // Angle cutoff ±69: clamp HEAD model; CAMERA can turn past (no setYaw). body locked.
+            float rel = net.minecraft.util.math.MathHelper.wrapDegrees(mc.player.headYaw - bodyYaw);
+            float clamped = bodyYaw + net.minecraft.util.math.MathHelper.clamp(rel, -69f, 69f); // 69% cutoff
+            mc.player.setHeadYaw(clamped);   // head doesn't actually move past ±69; camera can still turn past
             mc.player.limbAnimator.reset();
         }
     }
