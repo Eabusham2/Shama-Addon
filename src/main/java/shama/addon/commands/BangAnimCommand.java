@@ -21,6 +21,7 @@ public final class BangAnimCommand extends Command {
     private boolean active;
     private double speed = 1.0;
     private int startAge;
+    private boolean noclipFlag;
 
     private BangAnimCommand() {
         super("banganim", "Toggle the bang swing animation on yourself without locking to a target. .banganim [speed]; .unbanganim off.", "unbanganim");
@@ -34,26 +35,37 @@ public final class BangAnimCommand extends Command {
             return;
         }
 
-        builder.executes(ctx -> { toggle(null); return SINGLE_SUCCESS; });
-        builder.then(argument("speed", DoubleArgumentType.doubleArg(0.1, 10))
-            .executes(ctx -> { toggle(DoubleArgumentType.getDouble(ctx, "speed")); return SINGLE_SUCCESS; }));
+        builder.executes(ctx -> { toggle(null, false); return SINGLE_SUCCESS; });
+        // .banganim [noclip] -> working noclip; speed unspecified -> module-style default
+        builder.then(literal("noclip").executes(ctx -> { toggle(null, true); return SINGLE_SUCCESS; }));
+        // .banganim <speed> [noclip]; speed optional + noclip optional
+        com.mojang.brigadier.builder.RequiredArgumentBuilder<CommandSource, Double> speed = argument("speed", DoubleArgumentType.doubleArg(0.1, 10));
+        speed.executes(ctx -> { toggle(DoubleArgumentType.getDouble(ctx, "speed"), false); return SINGLE_SUCCESS; });
+        speed.then(literal("noclip").executes(ctx -> { toggle(DoubleArgumentType.getDouble(ctx, "speed"), true); return SINGLE_SUCCESS; }));
+        builder.then(speed);
+        builder.then(literal("noclip").then(argument("speed", DoubleArgumentType.doubleArg(0.1, 10))
+            .executes(ctx -> { toggle(DoubleArgumentType.getDouble(ctx, "speed"), true); return SINGLE_SUCCESS; })));
     }
 
-    private void toggle(Double speed) {
+    private void toggle(Double speed, boolean noclip) {
         if (active) { setActive(false); Chat.info("[banganim] Stopped."); return; }
         if (speed != null) this.speed = speed;
+        this.noclipFlag = noclip;
         setActive(true);
-        Chat.info("[banganim] Playing at %s cycles per second.", this.speed);
+        Chat.info("[banganim] Playing at %s cycles per second%s.", this.speed, noclip ? " (noclip)" : "");
     }
+
+    public boolean isNoClip() { return active && noclipFlag; }
 
     public void setActive(boolean on) {
         active = on;
         if (mc.player == null) return;
         if (on) {
             startAge = mc.player.age;
-            mc.player.noClip = true;   // walk through players (no collision); restored on off
+            mc.player.noClip = noclipFlag;   // .banganim -> no noClip; .banganim noclip -> noClip + no push
         } else {
             mc.player.noClip = false;
+            noclipFlag = false;
         }
     }
 
