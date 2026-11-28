@@ -153,12 +153,10 @@ public class Bang extends Module {
                 checkArrival();
             }
         } else {
-            // Normal mode: exactly restore original — face target, steady head, no limb animation
-            float yaw = followed.getBodyYaw() + (position.get() == Position.Front ? 180f : 0f); // front: turn around to face target; back: match target (original bang-1)
-            mc.player.setYaw(yaw);
-            mc.player.setHeadYaw(yaw);
-            mc.player.setBodyYaw(yaw);
-            mc.player.setPitch(0);
+            // Normal mode: body locked in animation, but you can LOOK AROUND (mouse changes head; body stays locked).
+            float bodyYaw = followed.getBodyYaw() + (position.get() == Position.Front ? 180f : 0f); // front: turn around; back: match target (original bang-1)
+            mc.player.setBodyYaw(bodyYaw);   // lock body facing
+            // NOT setYaw / setHeadYaw / setPitch -> head/camera can turn independently; no walking/crouching
             mc.player.limbAnimator.reset();
         }
     }

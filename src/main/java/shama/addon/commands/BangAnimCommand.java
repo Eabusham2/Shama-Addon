@@ -48,7 +48,13 @@ public final class BangAnimCommand extends Command {
 
     public void setActive(boolean on) {
         active = on;
-        if (on) startAge = mc.player != null ? mc.player.age : 0;
+        if (mc.player == null) return;
+        if (on) {
+            startAge = mc.player.age;
+            mc.player.noClip = true;   // walk through players (no collision); restored on off
+        } else {
+            mc.player.noClip = false;
+        }
     }
 
     public boolean isAnimActive() { return active; }
@@ -66,5 +72,5 @@ public final class BangAnimCommand extends Command {
     }
 
     @EventHandler
-    private void onLeave(GameLeftEvent event) { active = false; }
+    private void onLeave(GameLeftEvent event) { setActive(false); }
 }
