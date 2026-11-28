@@ -27,7 +27,6 @@ public class Bang extends Module {
     public enum Position { Back, Front }
 
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
-    private final SettingGroup sgTarget = settings.createGroup("Target");
     private final SettingGroup sgLegit = settings.createGroup("Legit Mode");
 
     public final Setting<Mode> mode = sgGeneral.add(new EnumSetting.Builder<Mode>()
@@ -46,9 +45,9 @@ public class Bang extends Module {
         .name("height")
         .description("Vertical offset from the target's feet. 0.2 puts you at their waist.")
         .defaultValue(0.2)
-        .min(-2)
+        .min(0)
         .max(2)
-        .sliderRange(-1, 1)
+        .sliderRange(0, 1)
         .decimalPlaces(2)
         .build());
 
@@ -70,12 +69,6 @@ public class Bang extends Module {
         .max(10)
         .sliderRange(0.1, 5)
         .decimalPlaces(1)
-        .build());
-
-    public final Setting<String> target = sgTarget.add(new StringSetting.Builder()
-        .name("player")
-        .description("Who to bang. Set by .bang <player> <speed>.")
-        .defaultValue("")
         .build());
 
     public final Setting<Boolean> legitWalk = sgLegit.add(new BoolSetting.Builder()
@@ -103,6 +96,7 @@ public class Bang extends Module {
         .build());
 
     // Runtime state (public for BangCommand access)
+    public String targetName = "";
     public PlayerEntity followed;
     public int startAge;
     public boolean walkingPhase;
@@ -118,11 +112,7 @@ public class Bang extends Module {
 
     @Override
     public void onActivate() {
-        if (target.get().isBlank()) {
-            Chat.error("[bang] No target set. Use .bang <player> [speed] to start.");
-            toggle();
-            return;
-        }
+        // Enabling the module alone does NOT start banging; need .bang <player>.
         followed = null;
         startAge = 0;
         walkingPhase = false;
@@ -164,7 +154,7 @@ public class Bang extends Module {
             }
         } else {
             // Normal mode: exactly restore original — face target, steady head, no limb animation
-            float yaw = followed.getYaw();
+            float yaw = followed.getYaw() + (position.get() == Position.Front ? 180f : 0f); // front: turn around to face target
             mc.player.setYaw(yaw);
             mc.player.setHeadYaw(yaw);
             mc.player.setBodyYaw(yaw);
@@ -177,7 +167,7 @@ public class Bang extends Module {
         if (followed != null && !followed.isRemoved() && followed.getEntityWorld() == mc.world) return followed;
         for (PlayerEntity p : mc.world.getPlayers()) {
             if (p == mc.player) continue;
-            if (p.getName().getString().equalsIgnoreCase(target.get())) return p;
+            if (p.getName().getString().equalsIgnoreCase(targetName)) return p;
         }
         return null;
     }
@@ -270,7 +260,7 @@ public class Bang extends Module {
 
     @Override
     public String getInfoString() {
-        if (target.get().isBlank()) return null;
-        return mode.get().name() + " " + position.get().name() + " " + target.get();
+        if (targetName.isBlank()) return null;
+        return mode.get().name() + " " + position.get().name() + " " + targetName;
     }
 }

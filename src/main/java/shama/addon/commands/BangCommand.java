@@ -33,56 +33,63 @@ public final class BangCommand extends Command {
     public void build(LiteralArgumentBuilder<CommandSource> builder) {
         builder.executes(ctx -> {
             Bang m = Modules.get().get(Bang.class);
-            if (m != null && m.isActive()) {
-                m.toggle();
+            if (m != null && m.followed != null) {
+                clear();   // stop banging; module stays on
                 Chat.info("[bang] Stopped.");
             } else {
-                Chat.info("[bang] Module not active. Use %s <player> [speed] to start.", this);
+                Chat.info("[bang] Not banging. Enable bang++ and use %s <player> [speed] [front|back].", this);
             }
             return SINGLE_SUCCESS;
         });
 
         if (builder.getLiteral().equals(getName())) {
-            builder.then(argument("player", PlayerArgumentType.create())
-                .executes(ctx -> start(PlayerArgumentType.get(ctx), null))
-                .then(argument("speed", DoubleArgumentType.doubleArg(0.1, 10))
-                    .executes(ctx -> start(PlayerArgumentType.get(ctx), DoubleArgumentType.getDouble(ctx, "speed")))));
+            // .bang <player> [speed] [front|back]; speed + front/back optional, fall back to module settings
+            com.mojang.brigadier.builder.RequiredArgumentBuilder<CommandSource, ?> player = argument("player", PlayerArgumentType.create());
+            player.executes(ctx -> start(PlayerArgumentType.get(ctx), null, null));
+            // speed then optional position
+            com.mojang.brigadier.builder.RequiredArgumentBuilder<CommandSource, Double> speed = argument("speed", DoubleArgumentType.doubleArg(0.1, 10));
+            speed.executes(ctx -> start(PlayerArgumentType.get(ctx), DoubleArgumentType.getDouble(ctx, "speed"), null));
+            speed.then(literal("front").executes(ctx -> start(PlayerArgumentType.get(ctx), DoubleArgumentType.getDouble(ctx, "speed"), Bang.Position.Front)));
+            speed.then(literal("back").executes(ctx -> start(PlayerArgumentType.get(ctx), DoubleArgumentType.getDouble(ctx, "speed"), Bang.Position.Back)));
+            player.then(speed);
+            // front/back without speed -> use module speed
+            player.then(literal("front").executes(ctx -> start(PlayerArgumentType.get(ctx), null, Bang.Position.Front)));
+            player.then(literal("back").executes(ctx -> start(PlayerArgumentType.get(ctx), null, Bang.Position.Back)));
+            builder.then(player);
         }
     }
 
-    private int start(PlayerEntity player, Double speed) {
+    private int start(PlayerEntity player, Double speed, Bang.Position pos) {
         Bang m = Modules.get().get(Bang.class);
-        if (m == null) {
-            Chat.error("[bang] Module not found.");
-            return 0;
-        }
-        if (player == mc.player) {
-            Chat.error("[bang] Pick a player other than yourself.");
-            return 0;
-        }
-        if (!player.isAlive() || !mc.player.isAlive()) {
-            Chat.error("[bang] Both players must be alive.");
-            return 0;
-        }
-        if (mc.player.hasVehicle() || mc.player.isSleeping()) {
-            Chat.error("[bang] Dismount or get out of bed first.");
-            return 0;
+        if (m == null) { Chat.error("[bang] Module not found."); return 0; }
+        // Command only works if bang++ is on; enabling module alone doesn't bang.
+        if (!m.isActive()) { Chat.error("[bang] Enable bang++ first."); return 0; }
+        if (player == mc.player) { Chat.error("[bang] Pick a player other than yourself."); return 0; }
+        if (!player.isAlive() || !mc.player.isAlive()) { Chat.error("[bang] Both players must be alive."); return 0; }
+        if (mc.player.hasVehicle() || mc.player.isSleeping()) { Chat.error("[bang] Dismount or get out of bed first."); return 0; }
+
+        String name = player.getName().getString();
+
+        // .bang <player> (no speed/position) while already banging that user -> unbang
+        if (speed == null && pos == null && m.followed != null && m.followed.getName().getString().equalsIgnoreCase(name)) {
+            stop(m); Chat.info("[bang] Stopped."); return SINGLE_SUCCESS;
         }
 
-        m.target.set(player.getName().getString());
-        if (speed != null) m.speed.set(speed);
-        if (!m.isActive()) m.toggle();
-        else {
-            m.startAge = mc.player.age;
-            m.followed = player;
-            Chat.info("[bang] Target changed to %s.", player.getName().getString());
-        }
+        if (speed != null) m.speed.set(speed);                 // speed given -> override; else use module speed
+        if (pos != null) m.position.set(pos);                  // front/back given -> override; else use module setting
+        m.targetName = name;
+        m.followed = player;
+        m.startAge = mc.player.age;
+        module = m;
+        Chat.info("[bang] Banging %s at %s cycles per second %s.", name, m.speed.get(), m.position.get().name().toLowerCase());
         return SINGLE_SUCCESS;
     }
 
+    private void stop(Bang m) { clear(); }
+
     // Called by Bang module each tick
     public PlayerInput applyInput(Input source, PlayerInput keyboard) {
-        if (module == null || module.target.get().isBlank()) return keyboard;
+        if (module == null || !module.isActive() || module.followed == null) return keyboard;
         if (source != mc.player.input) return keyboard;
         if (module.mode.get() == Bang.Mode.Legit) return module.legitInput().orElse(keyboard);
         return PlayerInput.DEFAULT; // Normal: clear keyboard, no walking/crouching
@@ -137,6 +144,7 @@ public final class BangCommand extends Command {
 
     public void clear() {
         target = null;
+        if (module != null) { module.followed = null; module.targetName = ""; }
         module = null;
     }
 }
