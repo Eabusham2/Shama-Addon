@@ -108,6 +108,8 @@ public class Bang extends Module {
     public boolean walkingPhase;
     public boolean atContact;
     public int crouchTicks;
+    public double legitPhase;
+    public boolean hasStartedLegit;
 
     public Bang() {
         super(shama.addon.ShamaAddon.MISC, "bang++",
@@ -126,6 +128,8 @@ public class Bang extends Module {
         walkingPhase = false;
         atContact = false;
         crouchTicks = 0;
+        legitPhase = 0;
+        hasStartedLegit = false;
     }
 
     @Override
@@ -150,8 +154,14 @@ public class Bang extends Module {
         BangCommand.INSTANCE.setTarget(followed);
         BangCommand.INSTANCE.setSpeed(speed.get());
 
-        if (mode.get() == Mode.Legit && !walkingPhase) {
-            startWalkingPhase();
+        if (mode.get() == Mode.Legit) {
+            if (!walkingPhase && !hasStartedLegit) {
+                // Walk phase first (Baritone), once
+                hasStartedLegit = true;
+                startWalkingPhase();
+            } else if (walkingPhase) {
+                checkArrival();
+            }
         }
     }
 
@@ -195,6 +205,7 @@ public class Bang extends Module {
             startAge = mc.player.age;
             atContact = false;
             crouchTicks = 0;
+            legitPhase = 0;
             Chat.info("[bang] Arrived. Starting animation.");
         }
         return false;
@@ -216,40 +227,36 @@ public class Bang extends Module {
         return t.getEntityPos().add(sign * behind * facing.x, height.get(), sign * behind * facing.z);
     }
 
-    /** Legit mode: generate PlayerInput for walking/crouching. */
+/**
+     * Legit mode: generate vanilla PlayerInput — walking + crouching, no custom pose,
+     * no hover-lock. Same logic as original; usable with a vanilla macro + good setup.
+     *
+     *   walk toward a spot moving 0.6↔1.3 blocks behind their facing
+     *   strafe left/right, jump on obstacle, sprint when far
+     *   crouch alternating half-time when touching
+     */
     public Optional<PlayerInput> legitInput() {
         if (mode.get() != Mode.Legit || walkingPhase) return Optional.empty();
 
-        Vec3d anchor = getAnchorPos(followed);
-        double dx = anchor.x - mc.player.getX();
-        double dz = anchor.z - mc.player.getZ();
-        double horiz = Math.sqrt(dx * dx + dz * dz);
-
-        boolean forward = horiz > 0.15;
-        boolean crouch = false;
-
-        // At contact distance: crouch for a few ticks
-        if (horiz < 0.15 && !atContact) {
-            atContact = true;
-            crouchTicks = legitCrouch.get() ? 4 : 0;
-        }
-        if (crouchTicks > 0) {
-            crouch = true;
-            crouchTicks--;
-        }
-        // Leaving contact: stand up and reset
-        if (atContact && horiz > 0.3) {
-            atContact = false;
-        }
-
-        float yaw = followed.getBodyYaw();
+        float yaw = followed.getYaw();
         mc.player.setYaw(yaw);
-        mc.player.setHeadYaw(yaw);
-        mc.player.setBodyYaw(yaw);
-        mc.player.setPitch(0);
+        Vec3d facing = Vec3d.fromPolar(0, yaw);
+        double dx = followed.getX() - mc.player.getX();
+        double dz = followed.getZ() - mc.player.getZ();
+        int sign = position.get() == Position.Back ? -1 : 1;
 
-        return Optional.of(new net.minecraft.util.PlayerInput(
-            forward, false, false, false, false, crouch, forward
+        // Walk toward a spot that moves between 0.6 and 1.3 blocks in front/behind their facing.
+        double behind = 0.95 + 0.35 * Math.cos(2 * Math.PI * legitPhase);
+        double forward = sign * (dx * facing.x + dz * facing.z - behind);
+        double left = dx * facing.z - dz * facing.x;
+        boolean close = mc.player.squaredDistanceTo(followed) < 4;
+        boolean crouch = legitCrouch.get() && close && legitPhase >= 0.5;
+        legitPhase = (legitPhase + speed.get() / 20) % 1;
+
+        boolean jump = mc.player.horizontalCollision && mc.player.isOnGround();
+        return Optional.of(new PlayerInput(
+            forward > 0.08, forward < -0.08, left > 0.08, left < -0.08,
+            jump, crouch, !close && forward > 0.08
         ));
     }
 
